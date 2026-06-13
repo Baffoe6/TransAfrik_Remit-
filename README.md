@@ -1,8 +1,52 @@
 # TransAfrik Remit
 
-Customer-facing remittance platform operated by **IPAYGO (Pty) Ltd**. Send money from South Africa (ZAR) to Ghana (GHS) via mobile money.
+Customer-facing remittance platform operated by **IPAYGO (Pty) Ltd**. Send money from South Africa (ZAR) to Africa via mobile money and partner corridors.
 
 > **Disclaimer:** TransAfrik is a customer-facing remittance facilitation platform operated by IPAYGO (Pty) Ltd. Transfers are processed through approved third-party payment and remittance partners. TransAfrik is not licensed as a bank or remittance operator.
+
+## Production (MVP v7.0.0)
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://app.ipaygo.co.za |
+| API | https://api.ipaygo.co.za |
+| Health | https://api.ipaygo.co.za/health |
+
+**Production environment variables (Railway):**
+
+```env
+ENVIRONMENT=production
+SEED_DEMO_DATA=false
+ENABLE_DEV_ENDPOINTS=false
+DOCS_ENABLED=false
+CORS_ORIGINS=https://app.ipaygo.co.za
+```
+
+After deploy, run `alembic upgrade head` on the production database.
+
+See also: [docs/API.md](docs/API.md) · [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · [PROJECT_STATUS.md](PROJECT_STATUS.md)
+
+### MVP Features
+
+- **Waitlist** — public signup at `/waitlist`, admin management at `/admin/waitlist`
+- **Customer dashboard** — profile completion, KYC, beneficiaries, transfers, history, referrals
+- **KYC workflow** — document upload, admin review with notes
+- **Transfer engine** — create/list/detail with MVP status labels
+- **Corridors** — ZA→GH, ZW, ZM, KE, NG, UG (admin-managed)
+- **Partner abstraction** — mock Flutterwave, Mukuru, Onafriq, Veengu providers
+- **Compliance & operations dashboards** — metrics, CSV export, KYC queue
+- **Launch readiness** — `/admin/launch-readiness` checklist with readiness %
+
+### Production Staff Accounts
+
+| Role | Email | Password (default seed) |
+|------|-------|-------------------------|
+| Admin | admin@transafrik.co.za | Admin@TransAfrik2024! |
+| Founder | founder@transafrik.co.za | Founder@TransAfrik2024! |
+| Compliance | compliance@transafrik.co.za | Compliance@TransAfrik2024! |
+| Operations | operations@transafrik.co.za | Operations@TransAfrik2024! |
+
+Demo customer, beneficiary, invite codes, and pilot stats are **not seeded** when `SEED_DEMO_DATA=false` (production default).
 
 ## Architecture
 
@@ -55,17 +99,18 @@ docker compose up --build
 | API Docs (Swagger) | http://localhost:8000/docs |
 | PostgreSQL | localhost:5432 |
 
-### Seed Accounts
+### Seed Accounts (local development)
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@ipaygo.co.za | Admin@TransAfrik2024! |
-| Compliance | compliance@ipaygo.co.za | Compliance@TransAfrik2024! |
-| Founder | founder@ipaygo.co.za | Founder@TransAfrik2024! |
+| Admin | admin@transafrik.co.za | Admin@TransAfrik2024! |
+| Compliance | compliance@transafrik.co.za | Compliance@TransAfrik2024! |
+| Founder | founder@transafrik.co.za | Founder@TransAfrik2024! |
+| Operations | operations@transafrik.co.za | Operations@TransAfrik2024! |
 | Agent | agent@transafrik.co.za | Agent@TransAfrik2024! |
 | Demo Customer | customer@demo.co.za | Customer@TransAfrik2024! |
 
-The demo customer has approved KYC and an approved Ghana beneficiary (Ama Osei, MTN Mobile Money) ready for transfers.
+When `SEED_DEMO_DATA=true` (local default), the demo customer has approved KYC and an approved Ghana beneficiary ready for transfers.
 
 Change these credentials in production via environment variables.
 

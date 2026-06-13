@@ -72,7 +72,7 @@ def validate_production_config() -> dict:
     }
 
 
-def migration_safety_check(current_revision: str | None, head_revision: str = "007") -> dict:
+def migration_safety_check(current_revision: str | None, head_revision: str = "009") -> dict:
     return {
         "current_revision": current_revision,
         "head_revision": head_revision,

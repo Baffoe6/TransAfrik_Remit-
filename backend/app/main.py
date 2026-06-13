@@ -20,6 +20,8 @@ from app.routers import (
     phase5_admin,
     phase6_admin,
     phase61_admin,
+    mvp,
+    mvp_admin,
     pilot,
     legal,
     profile,
@@ -56,7 +58,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TransAfrik Remit API",
     description=f"Remittance platform API by IPAYGO (Pty) Ltd.\n\n{DISCLAIMER}",
-    version="6.1.0",
+    version="7.0.0-mvp",
     lifespan=lifespan,
     docs_url="/docs" if settings.docs_enabled else None,
     redoc_url="/redoc" if settings.docs_enabled else None,
@@ -92,6 +94,8 @@ app.include_router(phase4_admin.router, prefix="/api/v1")
 app.include_router(phase5_admin.router, prefix="/api/v1")
 app.include_router(phase6_admin.router, prefix="/api/v1")
 app.include_router(phase61_admin.router, prefix="/api/v1")
+app.include_router(mvp.router, prefix="/api/v1")
+app.include_router(mvp_admin.router, prefix="/api/v1")
 app.include_router(pilot.router, prefix="/api/v1")
 app.include_router(legal.router, prefix="/api/v1")
 app.include_router(wallet.router, prefix="/api/v1")
@@ -122,7 +126,7 @@ def health(request: Request):
     return {
         "status": "healthy",
         "service": "transafrik-remit-api",
-        "version": "6.1.0",
+        "version": "7.0.0-mvp",
         "environment": settings.environment,
         "checks": {
             "database": {"status": db_status, "error": db_error},

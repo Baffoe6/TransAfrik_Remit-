@@ -76,3 +76,20 @@ def update_beneficiary(
     db.commit()
     db.refresh(beneficiary)
     return beneficiary
+
+
+@router.delete("/{beneficiary_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_beneficiary(
+    beneficiary_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    beneficiary = (
+        db.query(Beneficiary)
+        .filter(Beneficiary.id == beneficiary_id, Beneficiary.user_id == current_user.id)
+        .first()
+    )
+    if not beneficiary:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Beneficiary not found")
+    beneficiary.is_active = False
+    db.commit()

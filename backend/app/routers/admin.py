@@ -176,6 +176,8 @@ def review_kyc(
     profile.kyc_reviewed_at = datetime.now(UTC)
     profile.kyc_reviewed_by = admin.id
     profile.kyc_rejection_reason = data.rejection_reason if new_status == KycStatus.REJECTED else None
+    if data.review_notes:
+        profile.kyc_review_notes = data.review_notes
 
     db.query(KycDocument).filter(KycDocument.user_id == user_id).update({
         KycDocument.status: new_status,

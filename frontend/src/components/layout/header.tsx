@@ -13,6 +13,8 @@ export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const isProd = process.env.NODE_ENV === "production";
+
   const customerLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/profile", label: "Profile" },
@@ -20,42 +22,31 @@ export function Header() {
     { href: "/dashboard/beneficiaries", label: "Beneficiaries" },
     { href: "/dashboard/transfers", label: "Transfers" },
     { href: "/dashboard/wallet", label: "Wallet" },
-    { href: "/dashboard/pilot", label: "Pilot" },
+    ...(isProd ? [] : [{ href: "/dashboard/pilot", label: "Pilot" }]),
     { href: "/dashboard/referrals", label: "Referrals" },
     { href: "/dashboard/support", label: "Support" },
   ];
 
   const adminLinks = [
     { href: "/admin", label: "Dashboard" },
-    { href: "/admin/founder", label: "Founder" },
-    { href: "/admin/board", label: "Board" },
-    { href: "/admin/corridors", label: "Corridors" },
-    { href: "/admin/fx-sources", label: "FX Sources" },
     { href: "/admin/operations", label: "Operations" },
-    { href: "/admin/launch-checklist", label: "Launch" },
-    { href: "/admin/pilot", label: "Pilot Admin" },
-    { href: "/admin/runbook", label: "Runbook" },
-    { href: "/admin/demo", label: "Demo" },
-    { href: "/admin/documents", label: "Documents" },
-    { href: "/admin/analytics", label: "Analytics" },
-    { href: "/admin/treasury", label: "Treasury" },
-    { href: "/admin/settlement", label: "Settlement" },
-    { href: "/admin/mukuru", label: "Mukuru" },
-    { href: "/admin/payments", label: "Payments" },
-    { href: "/admin/payments/verify", label: "Verify" },
     { href: "/admin/compliance", label: "Compliance" },
-    { href: "/admin/compliance/edd", label: "EDD" },
+    { href: "/admin/waitlist", label: "Waitlist" },
+    { href: "/admin/launch-readiness", label: "Launch Readiness" },
+    { href: "/admin/corridors", label: "Corridors" },
     { href: "/admin/customers", label: "Customers" },
     { href: "/admin/kyc", label: "KYC" },
-    { href: "/admin/beneficiaries", label: "Beneficiaries" },
     { href: "/admin/transfers", label: "Transfers" },
-    { href: "/admin/support", label: "Support" },
-    { href: "/admin/rates", label: "Rates" },
+    { href: "/admin/payments", label: "Payments" },
     { href: "/admin/providers", label: "Providers" },
-    { href: "/admin/security", label: "Security" },
-    { href: "/admin/reports", label: "Reports" },
-    { href: "/admin/operations-audit", label: "Ops Audit" },
-    { href: "/admin/audit", label: "Audit" },
+    ...(isProd ? [] : [
+      { href: "/admin/pilot", label: "Pilot Admin" },
+      { href: "/admin/demo", label: "Demo" },
+      { href: "/admin/launch-checklist", label: "Launch" },
+    ]),
+    { href: "/admin/founder", label: "Founder" },
+    { href: "/admin/runbook", label: "Runbook" },
+    { href: "/admin/support", label: "Support" },
   ];
 
   const agentLinks = [

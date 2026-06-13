@@ -24,9 +24,14 @@ export default function LandingPage() {
               Competitive rates, clear fees, and full transfer tracking.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link href="/register">
+              <Link href="/waitlist">
                 <Button size="lg" variant="secondary">
-                  Start Sending <ArrowRight className="h-5 w-5" />
+                  Join Waitlist <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                  Register
                 </Button>
               </Link>
               <Link href="/login">

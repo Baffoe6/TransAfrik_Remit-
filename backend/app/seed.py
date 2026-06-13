@@ -121,50 +121,54 @@ def seed():
         _ensure_user(db, settings.seed_admin_email, settings.seed_admin_password, UserRole.ADMIN)
         _ensure_user(db, settings.seed_compliance_email, settings.seed_compliance_password, UserRole.COMPLIANCE_OFFICER)
         _ensure_user(db, settings.seed_founder_email, settings.seed_founder_password, UserRole.FOUNDER)
+        _ensure_user(db, settings.seed_operations_email, settings.seed_operations_password, UserRole.ADMIN)
 
-        agent_user = _ensure_user(db, settings.seed_agent_email, settings.seed_agent_password, UserRole.AGENT)
-        if not db.query(AgentProfile).filter(AgentProfile.user_id == agent_user.id).first():
-            db.add(AgentProfile(user_id=agent_user.id, agent_code="AGDEMO01", display_name="Demo Agent", region="Gauteng", commission_rate=Decimal("1.50")))
-            print(f"Created demo agent: {settings.seed_agent_email}")
+        seed_demo = settings.seed_demo_data and not settings.is_production
 
-        customer = _ensure_user(db, settings.seed_customer_email, settings.seed_customer_password, UserRole.CUSTOMER)
-        customer.phone = "+27821234567"
+        if seed_demo:
+            agent_user = _ensure_user(db, settings.seed_agent_email, settings.seed_agent_password, UserRole.AGENT)
+            if not db.query(AgentProfile).filter(AgentProfile.user_id == agent_user.id).first():
+                db.add(AgentProfile(user_id=agent_user.id, agent_code="AGDEMO01", display_name="Demo Agent", region="Gauteng", commission_rate=Decimal("1.50")))
+                print(f"Created demo agent: {settings.seed_agent_email}")
 
-        profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == customer.id).first()
-        if not profile:
-            profile = CustomerProfile(
-                user_id=customer.id,
-                first_name="Thabo",
-                last_name="Molefe",
-                id_number="8001015800088",
-                address_line1="12 Main Road",
-                city="Johannesburg",
-                province="Gauteng",
-                postal_code="2001",
-                kyc_status=KycStatus.APPROVED,
+            customer = _ensure_user(db, settings.seed_customer_email, settings.seed_customer_password, UserRole.CUSTOMER)
+            customer.phone = "+27821234567"
+
+            profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == customer.id).first()
+            if not profile:
+                profile = CustomerProfile(
+                    user_id=customer.id,
+                    first_name="Thabo",
+                    last_name="Molefe",
+                    id_number="8001015800088",
+                    address_line1="12 Main Road",
+                    city="Johannesburg",
+                    province="Gauteng",
+                    postal_code="2001",
+                    kyc_status=KycStatus.APPROVED,
+                )
+                db.add(profile)
+                print(f"Created demo customer profile: {settings.seed_customer_email}")
+
+            beneficiary = (
+                db.query(Beneficiary)
+                .filter(Beneficiary.user_id == customer.id, Beneficiary.mobile_wallet_number == "233241234567")
+                .first()
             )
-            db.add(profile)
-            print(f"Created demo customer profile: {settings.seed_customer_email}")
-
-        beneficiary = (
-            db.query(Beneficiary)
-            .filter(Beneficiary.user_id == customer.id, Beneficiary.mobile_wallet_number == "233241234567")
-            .first()
-        )
-        if not beneficiary:
-            beneficiary = Beneficiary(
-                user_id=customer.id,
-                beneficiary_type=BeneficiaryType.MOBILE_MONEY,
-                full_name="Ama Osei",
-                account_name="Ama Osei",
-                country="GH",
-                mobile_money_provider="MTN Ghana",
-                mobile_wallet_number="233241234567",
-                relationship_to_sender="Sister",
-                status=BeneficiaryStatus.APPROVED,
-            )
-            db.add(beneficiary)
-            print("Created demo beneficiary: Ama Osei (MTN Ghana)")
+            if not beneficiary:
+                beneficiary = Beneficiary(
+                    user_id=customer.id,
+                    beneficiary_type=BeneficiaryType.MOBILE_MONEY,
+                    full_name="Ama Osei",
+                    account_name="Ama Osei",
+                    country="GH",
+                    mobile_money_provider="MTN Ghana",
+                    mobile_wallet_number="233241234567",
+                    relationship_to_sender="Sister",
+                    status=BeneficiaryStatus.APPROVED,
+                )
+                db.add(beneficiary)
+                print("Created demo beneficiary: Ama Osei (MTN Ghana)")
 
         if not db.query(Provider).filter(Provider.code == "manual_mukuru").first():
             db.add(Provider(
@@ -302,14 +306,17 @@ def seed():
 
         if not db.query(PilotSettings).first():
             db.add(PilotSettings(
-                pilot_mode_enabled=True,
-                invite_only_registration=True,
-                require_admin_approval=True,
-                default_allowed_corridors=["ZA-GH"],
-                demo_mode_enabled=True,
+                pilot_mode_enabled=seed_demo,
+                invite_only_registration=seed_demo,
+                require_admin_approval=seed_demo,
+                default_allowed_corridors=["ZA-GH", "ZA-ZW", "ZA-ZM", "ZA-KE", "ZA-NG", "ZA-UG"],
+                demo_mode_enabled=False,
             ))
-            db.add(PilotInvite(invite_code="PILOTDEMO2026", email=settings.seed_customer_email, max_uses=10))
-            print("Created pilot settings and demo invite PILOTDEMO2026")
+            if seed_demo:
+                db.add(PilotInvite(invite_code="PILOTDEMO2026", email=settings.seed_customer_email, max_uses=10))
+                print("Created pilot settings and demo invite PILOTDEMO2026")
+            else:
+                print("Created production pilot settings (no demo invite)")
 
         for code, ptype, name, enabled in provider_configs:
             if not db.query(ProviderConfig).filter(ProviderConfig.provider_code == code).first():
@@ -321,20 +328,25 @@ def seed():
                     is_sandbox=True,
                 ))
 
-        demo_user = db.query(User).filter(User.email == settings.seed_customer_email).first()
-        if demo_user and not db.query(PilotCustomer).filter(PilotCustomer.user_id == demo_user.id).first():
-            db.add(PilotCustomer(
-                user_id=demo_user.id,
-                status=PilotCustomerStatus.APPROVED,
-                invite_code_used="PILOTDEMO2026",
-                allowed_corridors=["ZA-GH"],
-            ))
+        if seed_demo:
+            demo_user = db.query(User).filter(User.email == settings.seed_customer_email).first()
+            if demo_user and not db.query(PilotCustomer).filter(PilotCustomer.user_id == demo_user.id).first():
+                db.add(PilotCustomer(
+                    user_id=demo_user.id,
+                    status=PilotCustomerStatus.APPROVED,
+                    invite_code_used="PILOTDEMO2026",
+                    allowed_corridors=["ZA-GH"],
+                ))
 
         db.commit()
         print("Seed completed successfully")
-        print(f"  Demo customer: {settings.seed_customer_email} / {settings.seed_customer_password}")
-        print(f"  Demo agent: {settings.seed_agent_email} / {settings.seed_agent_password}")
-        print(f"  Founder: {settings.seed_founder_email} / {settings.seed_founder_password}")
+        if seed_demo:
+            print(f"  Demo customer: {settings.seed_customer_email} / {settings.seed_customer_password}")
+            print(f"  Demo agent: {settings.seed_agent_email} / {settings.seed_agent_password}")
+        print(f"  Admin: {settings.seed_admin_email}")
+        print(f"  Founder: {settings.seed_founder_email}")
+        print(f"  Compliance: {settings.seed_compliance_email}")
+        print(f"  Operations: {settings.seed_operations_email}")
     except Exception as e:
         db.rollback()
         print(f"Seed error: {e}")

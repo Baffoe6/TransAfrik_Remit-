@@ -15,6 +15,7 @@ class DashboardStats(BaseModel):
 class KycReviewRequest(BaseModel):
     status: str
     rejection_reason: str | None = None
+    review_notes: str | None = None
 
 
 class BeneficiaryReviewRequest(BaseModel):

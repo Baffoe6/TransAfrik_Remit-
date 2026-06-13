@@ -16,16 +16,19 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     max_upload_size_mb: int = 10
     allowed_upload_extensions: str = ".pdf,.jpg,.jpeg,.png,.webp"
-    seed_admin_email: str = "admin@ipaygo.co.za"
+    seed_admin_email: str = "admin@transafrik.co.za"
     seed_admin_password: str = "Admin@TransAfrik2024!"
-    seed_compliance_email: str = "compliance@ipaygo.co.za"
+    seed_compliance_email: str = "compliance@transafrik.co.za"
     seed_compliance_password: str = "Compliance@TransAfrik2024!"
+    seed_operations_email: str = "operations@transafrik.co.za"
+    seed_operations_password: str = "Operations@TransAfrik2024!"
     seed_customer_email: str = "customer@demo.co.za"
     seed_customer_password: str = "Customer@TransAfrik2024!"
     seed_agent_email: str = "agent@transafrik.co.za"
     seed_agent_password: str = "Agent@TransAfrik2024!"
-    seed_founder_email: str = "founder@ipaygo.co.za"
+    seed_founder_email: str = "founder@transafrik.co.za"
     seed_founder_password: str = "Founder@TransAfrik2024!"
+    seed_demo_data: bool = True
     enable_dev_endpoints: bool = True
     docs_enabled: bool = True
     whatsapp_bot_provider: str = "twilio"
@@ -72,7 +75,11 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
         if self.is_production or self.environment.lower() == "staging":
-            for origin in ("https://trans-afrik-remit.vercel.app",):
+            for origin in (
+                "https://trans-afrik-remit.vercel.app",
+                "https://app.ipaygo.co.za",
+                "https://api.ipaygo.co.za",
+            ):
                 if origin not in origins:
                     origins.append(origin)
         return origins

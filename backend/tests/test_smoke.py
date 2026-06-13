@@ -17,7 +17,7 @@ def test_health():
     data = res.json()
     assert data["status"] == "healthy"
     assert data["service"] == "transafrik-remit-api"
-    assert data["version"] == "6.1.0"
+    assert data["version"] == "7.0.0-mvp"
 
 
 def test_disclaimer():

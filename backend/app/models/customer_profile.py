@@ -26,6 +26,7 @@ class CustomerProfile(Base):
     kyc_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     kyc_reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     kyc_rejection_reason: Mapped[str | None] = mapped_column(Text)
+    kyc_review_notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

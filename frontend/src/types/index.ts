@@ -329,3 +329,48 @@ export const BENEFICIARY_TYPES: { value: BeneficiaryType; label: string }[] = [
 
 export const DISCLAIMER =
   "TransAfrik Remit is a customer-facing remittance facilitation platform operated by IPAYGO (Pty) Ltd. Transfers are processed through approved third-party payment and remittance partners.";
+
+export interface DashboardSummary {
+  profile_completion: { percent: number; missing: string[] };
+  kyc: {
+    status: string;
+    raw_status: string;
+    documents_uploaded: number;
+    rejection_reason: string | null;
+  };
+  beneficiaries: {
+    count: number;
+    items: {
+      id: number;
+      full_name: string;
+      country: string;
+      mobile_wallet_number: string | null;
+      mobile_money_provider: string | null;
+      relationship_to_sender: string;
+      status: string;
+    }[];
+  };
+  transfers: {
+    count: number;
+    recent: {
+      id: number;
+      reference: string;
+      status: string;
+      send_amount_zar: string;
+      receive_amount_ghs: string;
+      created_at: string | null;
+    }[];
+  };
+  transaction_history: {
+    id: number;
+    reference: string;
+    status: string;
+    send_amount_zar: string;
+    receive_amount_ghs: string;
+    fee_zar: string;
+    exchange_rate: string;
+    created_at: string | null;
+    completed_at: string | null;
+  }[];
+  referral_program: { referrals_made: number };
+}

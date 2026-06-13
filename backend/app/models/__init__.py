@@ -35,6 +35,7 @@ from app.models.whatsapp_conversation import WhatsAppConversationLog
 from app.models.operations_health import OperationsQueueStatus, ProviderHealthCheck
 from app.models.pilot import PilotCustomer, PilotInvite, PilotSettings
 from app.models.support_ops import SupportTicketNote
+from app.models.waitlist import WaitlistLead
 
 __all__ = [
     "User",
@@ -97,4 +98,5 @@ __all__ = [
     "PilotInvite",
     "PilotCustomer",
     "SupportTicketNote",
+    "WaitlistLead",
 ]

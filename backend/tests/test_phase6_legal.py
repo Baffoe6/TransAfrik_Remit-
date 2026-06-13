@@ -26,4 +26,4 @@ def test_legal_page_terms():
 
 def test_health_v6():
     res = client.get("/health")
-    assert res.json()["version"] == "6.1.0"
+    assert res.json()["version"] == "7.0.0-mvp"
