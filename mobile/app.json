@@ -25,7 +25,12 @@
         "backgroundColor": "#1B5E3B"
       },
       "package": "co.za.ipaygo.transafrik",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "USE_BIOMETRIC", "USE_FINGERPRINT"]
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
     },
     "plugins": [
       "expo-secure-store",
@@ -36,7 +41,8 @@
           "color": "#1B5E3B"
         }
       ],
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "expo-asset"
     ],
     "extra": {
       "apiUrl": "https://api.ipaygo.co.za"
