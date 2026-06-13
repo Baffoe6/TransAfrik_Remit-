@@ -2,6 +2,8 @@ node_modules/
 .expo/
 dist/
 *.jks
+*.keystore
+google-service-account.json
 *.p8
 *.p12
 *.mobileprovision

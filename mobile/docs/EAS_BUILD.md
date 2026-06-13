@@ -72,16 +72,20 @@ Defined in `eas.json`:
 |---------|---------|--------|
 | `development` | Dev client with hot reload | Internal |
 | `preview` | QA / internal testing | Android APK, iOS Simulator |
+| `preview-apk` | Same as preview (APK alias) | Android APK |
 | `production` | Store release | Android AAB, iOS IPA |
 
 ---
 
 ## 4. Android Builds
 
+> **Internal testing APK:** See [ANDROID_PREVIEW_BUILD.md](./ANDROID_PREVIEW_BUILD.md) for the complete step-by-step guide.
+
 ### Internal testing (APK — share via link)
 
 ```bash
-eas build --platform android --profile preview
+npm run build:android:preview
+# or: eas build --platform android --profile preview
 ```
 
 Download the APK from the Expo dashboard link and install on test devices.

@@ -68,7 +68,16 @@ Scan the QR code with **Expo Go** (Android/iOS) or press `a` / `i` for emulator.
 
 ## Builds
 
-### Android (APK/AAB)
+### Android — Internal testing (APK)
+```bash
+npm run eas:login    # one-time
+npm run eas:init     # one-time — links project to Expo
+npm run build:android:preview
+```
+
+See **[docs/ANDROID_PREVIEW_BUILD.md](docs/ANDROID_PREVIEW_BUILD.md)** for full internal testing guide.
+
+### Android — Production (AAB for Play Store)
 ```bash
 npm run build:android
 # or: eas build --platform android --profile production
@@ -80,7 +89,7 @@ npm run build:ios
 # or: eas build --platform ios --profile production
 ```
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for EAS setup.
+See [docs/EAS_BUILD.md](docs/EAS_BUILD.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for full EAS setup.
 
 ## Testing
 

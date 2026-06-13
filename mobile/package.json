@@ -9,8 +9,12 @@
     "web": "expo start --web",
     "test": "jest",
     "lint": "tsc --noEmit",
-    "build:android": "eas build --platform android",
-    "build:ios": "eas build --platform ios"
+    "build:android": "eas build --platform android --profile production",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:apk": "eas build --platform android --profile preview-apk",
+    "build:ios": "eas build --platform ios --profile production",
+    "eas:init": "eas init",
+    "eas:login": "eas login"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",

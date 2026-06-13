@@ -28,16 +28,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   bootstrap: async () => {
     const token = await secureStorage.getAccessToken();
-    if (!token) {
-      set({ initialized: true });
-      return;
-    }
+    // Show UI immediately after local token read — don't block on network.
+    set({ initialized: true });
+    if (!token) return;
     try {
       const { data } = await authApi.me();
-      set({ user: data, initialized: true });
+      set({ user: data });
     } catch {
       await secureStorage.clearTokens();
-      set({ user: null, initialized: true });
+      set({ user: null });
     }
   },
 
