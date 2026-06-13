@@ -1,0 +1,1 @@
+"""TransAfrik Remit backend application."""

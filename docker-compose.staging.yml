@@ -1,0 +1,127 @@
+# Staging / production deployment for TransAfrik Remit v6.1.0
+# Usage: docker compose -f docker-compose.staging.yml up --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-transafrik}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transafrik_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-transafrik}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transafrik}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_staging_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-transafrik}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-transafrik_minio_secret}
+    volumes:
+      - minio_staging_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-staging}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-transafrik}:${POSTGRES_PASSWORD:-transafrik_secret}@db:5432/${POSTGRES_DB:-transafrik}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-use-openssl-rand-hex-32}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://staging.transafrik.co.za}
+      UPLOAD_DIR: /app/uploads
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+      S3_BUCKET: ${S3_BUCKET:-transafrik-staging}
+      S3_REGION: ${S3_REGION:-af-south-1}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-transafrik}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-transafrik_minio_secret}
+      REQUIRE_HTTPS: ${REQUIRE_HTTPS:-true}
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}
+      ENABLE_DEV_ENDPOINTS: ${ENABLE_DEV_ENDPOINTS:-false}
+      DOCS_ENABLED: ${DOCS_ENABLED:-false}
+      WEBHOOK_REPLAY_PROTECTION: "true"
+      WEBHOOK_IDEMPOTENCY_ENABLED: "true"
+      WEBHOOK_QUEUE_ENABLED: "true"
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      SMS_PROVIDER: ${SMS_PROVIDER:-console}
+    volumes:
+      - uploads_staging_data:/app/uploads
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://staging.transafrik.co.za/api}
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://staging.transafrik.co.za/api}
+    expose:
+      - "3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  minio_staging_data:
+  uploads_staging_data:

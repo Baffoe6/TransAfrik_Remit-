@@ -1,0 +1,93 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-transafrik}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transafrik_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-transafrik}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transafrik}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-transafrik}:${POSTGRES_PASSWORD:-transafrik_secret}@db:5432/${POSTGRES_DB:-transafrik}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-use-openssl-rand-hex-32}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
+      ENABLE_DEV_ENDPOINTS: ${ENABLE_DEV_ENDPOINTS:-true}
+      DOCS_ENABLED: ${DOCS_ENABLED:-true}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@ipaygo.co.za}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin@TransAfrik2024!}
+      SEED_COMPLIANCE_EMAIL: ${SEED_COMPLIANCE_EMAIL:-compliance@ipaygo.co.za}
+      SEED_COMPLIANCE_PASSWORD: ${SEED_COMPLIANCE_PASSWORD:-Compliance@TransAfrik2024!}
+      SEED_CUSTOMER_EMAIL: ${SEED_CUSTOMER_EMAIL:-customer@demo.co.za}
+      SEED_CUSTOMER_PASSWORD: ${SEED_CUSTOMER_PASSWORD:-Customer@TransAfrik2024!}
+      SEED_AGENT_EMAIL: ${SEED_AGENT_EMAIL:-agent@transafrik.co.za}
+      SEED_AGENT_PASSWORD: ${SEED_AGENT_PASSWORD:-Agent@TransAfrik2024!}
+      SEED_FOUNDER_EMAIL: ${SEED_FOUNDER_EMAIL:-founder@ipaygo.co.za}
+      SEED_FOUNDER_PASSWORD: ${SEED_FOUNDER_PASSWORD:-Founder@TransAfrik2024!}
+      WHATSAPP_BOT_PROVIDER: ${WHATSAPP_BOT_PROVIDER:-twilio}
+      FX_SYNC_INTERVAL_HOURS: ${FX_SYNC_INTERVAL_HOURS:-1}
+      API_SIGNING_SECRET: ${API_SIGNING_SECRET:-}
+      REQUIRE_HTTPS: ${REQUIRE_HTTPS:-false}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      PILOT_MODE_ENABLED: ${PILOT_MODE_ENABLED:-true}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  uploads_data:

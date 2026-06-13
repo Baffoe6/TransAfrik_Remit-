@@ -1,0 +1,3 @@
+Transfer ID,Customer Name,Customer Phone,Recipient Name,Recipient Country,Recipient Mobile Number,Provider,Amount ZAR,Amount Destination Currency,Reference Number,Status,Batch_ID
+1,John Mbeki,+27821234567,Ama Osei,GH,233241234567,MTN Mobile Money,1000.00,720.00,PAYAT-TA260612A1B2C3,ready_for_processing,BATCH-20260612120000-A1B2C3
+2,John Mbeki,+27821234567,Kwame Asante,GH,233209876543,Telecel Cash,2500.00,1800.00,EP1A2B3C4D5,ready_for_processing,BATCH-20260612120000-A1B2C3
