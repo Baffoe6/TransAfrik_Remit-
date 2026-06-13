@@ -39,7 +39,7 @@ class Transfer(Base):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    user: Mapped["User"] = relationship("User", back_populates="transfers")
+    user: Mapped["User"] = relationship("User", back_populates="transfers", foreign_keys=[user_id])
     beneficiary: Mapped["Beneficiary"] = relationship("Beneficiary", back_populates="transfers")
     payment_method: Mapped["PaymentMethod | None"] = relationship("PaymentMethod", back_populates="transfers")
     provider: Mapped["Provider | None"] = relationship("Provider", back_populates="transfers")
