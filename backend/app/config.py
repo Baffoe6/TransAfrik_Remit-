@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     cors_origins: str = "http://localhost:3000"
+    cors_origin_regex: str = ""
     upload_dir: str = "./uploads"
     max_upload_size_mb: int = 10
     allowed_upload_extensions: str = ".pdf,.jpg,.jpeg,.png,.webp"
@@ -70,6 +71,14 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def effective_cors_origin_regex(self) -> str | None:
+        if self.cors_origin_regex:
+            return self.cors_origin_regex
+        if self.is_production or self.environment.lower() == "staging":
+            return r"https://.*\.vercel\.app"
+        return None
 
     @property
     def allowed_extensions(self) -> set[str]:
