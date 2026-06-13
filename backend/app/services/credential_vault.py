@@ -1,5 +1,6 @@
 """Encrypted provider credential vault with sandbox/production switching."""
 
+import enum
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,10 @@ from app.models.webhook import ProviderConfig
 from app.vault.encryption import decrypt_value, encrypt_value
 
 SANDBOX_ENVIRONMENTS = {ApiEnvironment.DEVELOPMENT, ApiEnvironment.STAGING}
+
+
+def _enum_str(value) -> str:
+    return value.value if isinstance(value, enum.Enum) else value
 
 
 def _resolve_environment(config: ProviderConfig | None, override: ApiEnvironment | None) -> ApiEnvironment:
@@ -80,7 +85,7 @@ def list_credentials(
             "id": r.id,
             "provider_code": r.provider_code,
             "secret_name": r.secret_name,
-            "environment": r.environment.value,
+            "environment": _enum_str(r.environment),
             "credential_type": r.credential_type,
             "is_active": r.is_active,
             "validation_status": r.validation_status,
@@ -132,7 +137,7 @@ def validate_stored_credentials(db: Session, provider_code: str) -> dict:
         record.last_validated_at = now
         record.validation_status = "valid" if result.get("valid") else "invalid"
     db.flush()
-    result["environment"] = env.value
+    result["environment"] = _enum_str(env)
     result["credential_count"] = len(creds)
     return result
 

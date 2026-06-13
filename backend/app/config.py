@@ -1,6 +1,9 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.utils.database_url import normalize_database_url
 
 
 class Settings(BaseSettings):
@@ -62,6 +65,11 @@ class Settings(BaseSettings):
     webhook_idempotency_enabled: bool = True
     webhook_queue_enabled: bool = True
     rate_limit_redis_enabled: bool = True
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: str) -> str:
+        return normalize_database_url(value)
 
     @property
     def is_production(self) -> bool:

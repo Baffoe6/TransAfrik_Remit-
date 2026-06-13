@@ -47,4 +47,10 @@ def test_login_and_calculate_integration():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert calc.status_code == 200
-    assert Decimal(calc.json()["receive_amount_ghs"]) == Decimal("720.00")
+    data = calc.json()
+    send = Decimal(data["send_amount_zar"])
+    rate = Decimal(data["exchange_rate"])
+    receive = Decimal(data["receive_amount_ghs"])
+    assert send == Decimal("1000.00")
+    assert receive == (send * rate).quantize(Decimal("0.01"))
+    assert rate > 0

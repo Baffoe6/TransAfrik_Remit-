@@ -24,13 +24,17 @@ class User(Base):
     )
 
     profile: Mapped["CustomerProfile | None"] = relationship(
-        "CustomerProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+        "CustomerProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        foreign_keys="CustomerProfile.user_id",
     )
     beneficiaries: Mapped[list["Beneficiary"]] = relationship(
         "Beneficiary", back_populates="user", cascade="all, delete-orphan", foreign_keys="Beneficiary.user_id"
     )
     transfers: Mapped[list["Transfer"]] = relationship(
-        "Transfer", back_populates="user", cascade="all, delete-orphan"
+        "Transfer", back_populates="user", cascade="all, delete-orphan", foreign_keys="Transfer.user_id"
     )
     kyc_documents: Mapped[list["KycDocument"]] = relationship(
         "KycDocument", back_populates="user", cascade="all, delete-orphan", foreign_keys="KycDocument.user_id"
