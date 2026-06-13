@@ -104,24 +104,44 @@ def dashboard(admin: AdminUser, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.get("/customers", response_model=list[CustomerListItem])
-def list_customers(admin: AdminUser, db: Annotated[Session, Depends(get_db)]):
-    customers = (
+def list_customers(
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+    search: str | None = None,
+):
+    from sqlalchemy import or_
+
+    q = (
         db.query(User)
         .filter(User.role == UserRole.CUSTOMER)
         .options(joinedload(User.profile))
-        .order_by(User.created_at.desc())
-        .all()
+        .outerjoin(CustomerProfile, CustomerProfile.user_id == User.id)
     )
+    if search:
+        term = f"%{search.strip()}%"
+        filters = [
+            User.mobile_number.ilike(term),
+            User.email.ilike(term),
+            User.first_name.ilike(term),
+            User.last_name.ilike(term),
+            CustomerProfile.first_name.ilike(term),
+            CustomerProfile.last_name.ilike(term),
+        ]
+        if search.strip().isdigit():
+            filters.append(User.id == int(search.strip()))
+        q = q.filter(or_(*filters))
+    customers = q.order_by(User.created_at.desc()).all()
     result = []
     for c in customers:
         transfer_count = db.query(func.count(Transfer.id)).filter(Transfer.user_id == c.id).scalar() or 0
         result.append(CustomerListItem(
             id=c.id,
             email=c.email,
-            phone=c.phone,
-            first_name=c.profile.first_name if c.profile else None,
-            last_name=c.profile.last_name if c.profile else None,
+            mobile_number=c.mobile_number,
+            first_name=c.first_name or (c.profile.first_name if c.profile else None),
+            last_name=c.last_name or (c.profile.last_name if c.profile else None),
             kyc_status=c.profile.kyc_status.value if c.profile else None,
+            status=c.status,
             created_at=c.created_at,
             transfer_count=transfer_count,
         ))
@@ -411,7 +431,7 @@ def export_batch(
             transfer_id=t.id,
             reference=t.reference,
             sender_name=f"{profile.first_name} {profile.last_name}" if profile else t.user.email,
-            sender_phone=t.user.phone,
+            sender_phone=t.user.mobile_number,
             sender_id_number=profile.id_number if profile else None,
             beneficiary_name=t.beneficiary.full_name,
             beneficiary_country=t.beneficiary.country,
@@ -817,7 +837,7 @@ def _payment_detail(transfer: Transfer) -> dict:
         "transfer": TransferResponse.model_validate(transfer),
         "customer": {
             "email": transfer.user.email,
-            "phone": transfer.user.phone,
+            "mobile_number": transfer.user.mobile_number,
             "name": f"{profile.first_name} {profile.last_name}" if profile else None,
         },
         "beneficiary": {

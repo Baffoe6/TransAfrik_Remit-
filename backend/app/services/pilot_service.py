@@ -58,7 +58,9 @@ def create_invite(
     return invite
 
 
-def validate_invite_for_registration(db: Session, email: str, invite_code: str | None) -> PilotInvite | None:
+def validate_invite_for_registration(
+    db: Session, email: str | None, mobile_number: str, invite_code: str | None
+) -> PilotInvite | None:
     settings = get_pilot_settings(db)
     if not settings.pilot_mode_enabled or not settings.invite_only_registration:
         return None
@@ -72,8 +74,10 @@ def validate_invite_for_registration(db: Session, email: str, invite_code: str |
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invite code has expired")
     if invite.uses_count >= invite.max_uses:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invite code already used")
-    if invite.email and invite.email.lower() != email.lower():
+    if invite.email and email and invite.email.lower() != email.lower():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invite code not valid for this email")
+    if invite.email and not email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This invite requires an email address")
     return invite
 
 

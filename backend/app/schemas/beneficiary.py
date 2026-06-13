@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+
+from app.utils.phone import validate_phone_number
 
 
 class BeneficiaryCreate(BaseModel):
@@ -23,6 +25,12 @@ class BeneficiaryCreate(BaseModel):
         if self.beneficiary_type == "mobile_money":
             if not self.mobile_money_provider or not self.mobile_wallet_number:
                 raise ValueError("mobile_money_provider and mobile_wallet_number required for mobile money")
+            try:
+                self.mobile_wallet_number = validate_phone_number(
+                    self.mobile_wallet_number, default_country_code="233"
+                )
+            except ValueError as exc:
+                raise ValueError(f"Invalid beneficiary mobile number: {exc}") from exc
         elif self.beneficiary_type == "bank_account":
             if not self.bank_name or not self.bank_account_number:
                 raise ValueError("bank_name and bank_account_number required for bank account")
@@ -44,6 +52,13 @@ class BeneficiaryUpdate(BaseModel):
     pickup_city: str | None = Field(default=None, max_length=100)
     relationship_to_sender: str | None = Field(default=None, max_length=100)
     is_active: bool | None = None
+
+    @field_validator("mobile_wallet_number")
+    @classmethod
+    def normalize_wallet(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        return validate_phone_number(v, default_country_code="233")
 
 
 class BeneficiaryResponse(BaseModel):

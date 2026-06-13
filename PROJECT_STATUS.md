@@ -86,11 +86,26 @@ TransAfrik Remit has been upgraded from a pilot/demo platform to a **production-
 
 ## Migrations
 
-Latest revision: **009_mvp_production**
+Latest revision: **010_mobile_first_identity**
 
 ```bash
 cd backend && alembic upgrade head
 ```
+
+### Phase 0 — Mobile-First Identity (v7.1)
+- [x] `users.mobile_number` primary identifier (renamed from `phone`)
+- [x] `users.email` nullable; `first_name`/`last_name`/`status` on users
+- [x] Phone utilities: `normalize_phone_number`, `validate_phone_number`, `format_phone_number`
+- [x] Login: mobile or email + password (`identifier` field)
+- [x] Register: mobile required, email optional
+- [x] Waitlist: mobile mandatory, email optional
+- [x] Beneficiary mobile wallet E.164 validation
+- [x] Admin customer search by mobile, email, name, ID
+- [x] Dashboard mobile identity + verification status
+- [x] SMS OTP verification (`POST /auth/otp/send`, `POST /auth/otp/verify-phone`)
+- [x] WhatsApp OTP verification (channel=whatsapp)
+- [x] Passwordless OTP login (`POST /auth/login/otp`)
+- [x] Device trust + risk scoring (step-up on high-risk password login)
 
 ---
 

@@ -1,15 +1,16 @@
 """Customer dashboard aggregation service."""
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.beneficiary import Beneficiary
 from app.models.customer_profile import CustomerProfile
-from app.models.enums import KycStatus, TransferStatus
+from app.models.enums import KycStatus
 from app.models.kyc_document import KycDocument
 from app.models.referral_program import CustomerReferral
 from app.models.transfer import Transfer
+from app.models.user import User
 from app.services.transfer_status_mapper import to_mvp_status
+from app.utils.phone import format_phone_number
 
 
 def _kyc_display_status(status: KycStatus | str) -> str:
@@ -27,13 +28,13 @@ def _kyc_display_status(status: KycStatus | str) -> str:
     return mapping.get(status, status.value.title())
 
 
-def _profile_completion(profile: CustomerProfile | None) -> dict:
+def _profile_completion(profile: CustomerProfile | None, user: User | None) -> dict:
     if not profile:
         return {"percent": 0, "missing": ["profile"]}
     fields = {
         "first_name": profile.first_name,
         "last_name": profile.last_name,
-        "phone": True,
+        "mobile_number": user.mobile_number if user else None,
         "date_of_birth": profile.date_of_birth,
         "id_number": profile.id_number,
         "address": profile.address_line1,
@@ -44,6 +45,7 @@ def _profile_completion(profile: CustomerProfile | None) -> dict:
 
 
 def get_customer_dashboard(db: Session, user_id: int) -> dict:
+    user = db.query(User).filter(User.id == user_id).first()
     profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == user_id).first()
     docs = db.query(KycDocument).filter(KycDocument.user_id == user_id).all()
     beneficiaries = (
@@ -61,8 +63,17 @@ def get_customer_dashboard(db: Session, user_id: int) -> dict:
     )
     referral = db.query(CustomerReferral).filter(CustomerReferral.referrer_user_id == user_id).count()
 
+    mobile = user.mobile_number if user else None
+    phone_verified = user.phone_verified if user else False
+
     return {
-        "profile_completion": _profile_completion(profile),
+        "mobile_identity": {
+            "mobile_number": mobile,
+            "formatted_mobile": format_phone_number(mobile) if mobile else None,
+            "verified": phone_verified,
+            "verification_status": "Verified" if phone_verified else "Pending verification",
+        },
+        "profile_completion": _profile_completion(profile, user),
         "kyc": {
             "status": _kyc_display_status(profile.kyc_status) if profile else "Draft",
             "raw_status": profile.kyc_status.value if profile else "not_submitted",

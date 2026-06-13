@@ -20,7 +20,7 @@ def test_validate_invite_when_pilot_disabled(monkeypatch):
     settings.pilot_mode_enabled = False
     settings.invite_only_registration = True
     monkeypatch.setattr("app.services.pilot_service.get_pilot_settings", lambda d: settings)
-    assert validate_invite_for_registration(db, "test@example.com", None) is None
+    assert validate_invite_for_registration(db, "test@example.com", "+27721234567", None) is None
 
 
 def test_validate_invite_requires_code(monkeypatch):
@@ -31,4 +31,4 @@ def test_validate_invite_requires_code(monkeypatch):
     monkeypatch.setattr("app.services.pilot_service.get_pilot_settings", lambda d: settings)
     from fastapi import HTTPException
     with pytest.raises(HTTPException, match="invite"):
-        validate_invite_for_registration(db, "test@example.com", None)
+        validate_invite_for_registration(db, "test@example.com", "+27721234567", None)

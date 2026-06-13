@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api, getApiBaseUrl } from "@/lib/api";
+import { formatPhoneNumber } from "@/lib/phone";
 
 type Lead = {
   id: number;
   first_name: string;
   last_name: string;
-  email: string;
-  mobile: string | null;
+  email: string | null;
+  mobile: string;
   country_to: string;
   estimated_monthly_volume: string | null;
   created_at: string;
@@ -36,7 +37,7 @@ export default function AdminWaitlistPage() {
           <p className="text-gray-500">{data?.count ?? 0} leads</p>
         </div>
         <div className="flex gap-2">
-          <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder="Search mobile, email, name..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <Button variant="outline" onClick={() => load(search)}>Search</Button>
           <a href={`${getApiBaseUrl()}/api/v1/admin/waitlist/export`} target="_blank" rel="noreferrer">
             <Button>Export CSV</Button>
@@ -49,16 +50,20 @@ export default function AdminWaitlistPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-gray-500">
-                <th className="p-2">Name</th><th className="p-2">Email</th><th className="p-2">Mobile</th>
-                <th className="p-2">To</th><th className="p-2">Volume</th><th className="p-2">Joined</th>
+                <th className="p-2">Name</th>
+                <th className="p-2">Mobile</th>
+                <th className="p-2">Email</th>
+                <th className="p-2">To</th>
+                <th className="p-2">Volume</th>
+                <th className="p-2">Joined</th>
               </tr>
             </thead>
             <tbody>
               {(data?.leads ?? []).map((l) => (
                 <tr key={l.id} className="border-b">
                   <td className="p-2">{l.first_name} {l.last_name}</td>
-                  <td className="p-2">{l.email}</td>
-                  <td className="p-2">{l.mobile || "—"}</td>
+                  <td className="p-2">{formatPhoneNumber(l.mobile)}</td>
+                  <td className="p-2">{l.email || "—"}</td>
                   <td className="p-2">{l.country_to}</td>
                   <td className="p-2">{l.estimated_monthly_volume || "—"}</td>
                   <td className="p-2">{new Date(l.created_at).toLocaleDateString()}</td>

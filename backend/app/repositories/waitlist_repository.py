@@ -15,6 +15,9 @@ class WaitlistRepository:
     def get_by_email(self, email: str) -> WaitlistLead | None:
         return self.db.query(WaitlistLead).filter(WaitlistLead.email == email).first()
 
+    def get_by_mobile(self, mobile: str) -> WaitlistLead | None:
+        return self.db.query(WaitlistLead).filter(WaitlistLead.mobile == mobile).first()
+
     def list_leads(self, *, search: str | None = None, limit: int = 500) -> list[WaitlistLead]:
         q = self.db.query(WaitlistLead).order_by(WaitlistLead.created_at.desc())
         if search:

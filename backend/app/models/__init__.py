@@ -36,6 +36,7 @@ from app.models.operations_health import OperationsQueueStatus, ProviderHealthCh
 from app.models.pilot import PilotCustomer, PilotInvite, PilotSettings
 from app.models.support_ops import SupportTicketNote
 from app.models.waitlist import WaitlistLead
+from app.models.trusted_device import TrustedDevice
 
 __all__ = [
     "User",
@@ -99,4 +100,5 @@ __all__ = [
     "PilotCustomer",
     "SupportTicketNote",
     "WaitlistLead",
+    "TrustedDevice",
 ]

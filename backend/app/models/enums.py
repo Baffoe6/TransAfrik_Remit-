@@ -296,3 +296,8 @@ class SecurityEventType(str, enum.Enum):
     TOKEN_REVOKED = "token_revoked"
     PASSWORD_CHANGED = "password_changed"
     RATE_LIMITED = "rate_limited"
+    OTP_SENT = "otp_sent"
+    OTP_VERIFIED = "otp_verified"
+    OTP_FAILED = "otp_failed"
+    STEP_UP_REQUIRED = "step_up_required"
+    DEVICE_TRUSTED = "device_trusted"

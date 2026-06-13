@@ -17,8 +17,11 @@ import { StatusBadge, KycStatusBadge } from "@/components/transfers/status-badge
 import { api } from "@/lib/api";
 import type { DashboardSummary } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { Smartphone } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export default function CustomerDashboard() {
+  const { user } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +45,30 @@ export default function CustomerDashboard() {
         <h1 className="text-2xl font-bold text-[#1B5E3B]">Dashboard</h1>
         <p className="text-gray-500">Your remittance overview</p>
       </div>
+
+      <Card className="border-[#1B5E3B]/25 bg-gradient-to-r from-[#1B5E3B]/5 to-transparent">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base text-[#1B5E3B]">
+            <Smartphone className="h-5 w-5" /> Your Mobile Identity
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xl font-semibold">
+              {summary?.mobile_identity.formatted_mobile || summary?.mobile_identity.mobile_number || "—"}
+            </p>
+            <p className="text-sm text-gray-500">Customer ID: {user?.id ?? "—"}</p>
+          </div>
+          <div className="text-right">
+            <p className={`text-sm font-medium ${summary?.mobile_identity.verified ? "text-green-700" : "text-amber-700"}`}>
+              {summary?.mobile_identity.verification_status ?? "Pending verification"}
+            </p>
+            {!summary?.mobile_identity.verified && (
+              <Link href="/dashboard/profile" className="text-xs text-[#1B5E3B] underline">Verify mobile</Link>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card>

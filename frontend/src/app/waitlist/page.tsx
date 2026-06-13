@@ -37,7 +37,11 @@ export default function WaitlistPage() {
     try {
       await api("/waitlist/join", {
         method: "POST",
-        body: JSON.stringify({ ...form, country_from: "ZA" }),
+        body: JSON.stringify({
+          ...form,
+          country_from: "ZA",
+          email: form.email || undefined,
+        }),
       });
       setDone(true);
     } catch (err) {
@@ -75,8 +79,8 @@ export default function WaitlistPage() {
               <div><Label>First name</Label><Input required value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /></div>
               <div><Label>Last name</Label><Input required value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></div>
             </div>
-            <div><Label>Email</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>Mobile</Label><Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="+27..." /></div>
+            <div><Label>Mobile Number</Label><Input type="tel" required value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="+27721234567" /></div>
+            <div><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div>
               <Label>Destination country</Label>
               <select className="w-full rounded-md border px-3 py-2" value={form.country_to} onChange={(e) => setForm({ ...form, country_to: e.target.value })}>

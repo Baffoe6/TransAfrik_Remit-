@@ -53,7 +53,7 @@ def create_batch_from_transfers(
             transfer_id=t.id,
             reference=t.reference,
             sender_name=f"{profile.first_name} {profile.last_name}" if profile else t.user.email,
-            sender_phone=t.user.phone,
+            sender_phone=t.user.mobile_number,
             sender_id_number=profile.id_number if profile else None,
             beneficiary_name=t.beneficiary.full_name,
             beneficiary_country=t.beneficiary.country,

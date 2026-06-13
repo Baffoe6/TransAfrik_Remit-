@@ -280,11 +280,12 @@ export interface ComplianceQueueItem {
 
 export interface CustomerListItem {
   id: number;
-  email: string;
-  phone: string | null;
+  email: string | null;
+  mobile_number: string | null;
   first_name: string | null;
   last_name: string | null;
   kyc_status: string | null;
+  status: string;
   created_at: string;
   transfer_count: number;
 }
@@ -331,6 +332,12 @@ export const DISCLAIMER =
   "TransAfrik Remit is a customer-facing remittance facilitation platform operated by IPAYGO (Pty) Ltd. Transfers are processed through approved third-party payment and remittance partners.";
 
 export interface DashboardSummary {
+  mobile_identity: {
+    mobile_number: string | null;
+    formatted_mobile: string | null;
+    verified: boolean;
+    verification_status: string;
+  };
   profile_completion: { percent: number; missing: string[] };
   kyc: {
     status: string;

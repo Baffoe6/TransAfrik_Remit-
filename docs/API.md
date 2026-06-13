@@ -14,9 +14,14 @@ Base URL: `https://api.ipaygo.co.za/api/v1`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/auth/register` | Customer registration |
-| POST | `/auth/login` | Login (returns JWT) |
-| POST | `/auth/refresh` | Refresh tokens |
+| POST | `/auth/register` | Register (mobile required, email optional) |
+| POST | `/auth/login` | Login with mobile number or email + password |
+| POST | `/auth/otp/send` | Send OTP via SMS or WhatsApp |
+| POST | `/auth/login/otp` | Passwordless OTP login |
+| POST | `/auth/login/step-up` | Complete step-up after high-risk password login |
+| POST | `/auth/otp/verify-phone` | Verify mobile number (authenticated) |
+| GET | `/auth/devices` | List trusted devices |
+| POST | `/auth/devices/trust` | Trust or revoke a device |
 | POST | `/auth/logout` | Logout |
 | GET | `/auth/me` | Current user |
 

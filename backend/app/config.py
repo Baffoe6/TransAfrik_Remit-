@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     webhook_replay_protection: bool = True
     webhook_idempotency_enabled: bool = True
     webhook_queue_enabled: bool = True
+    whatsapp_provider: str = "console"
+    otp_dev_expose_code: bool = True
     rate_limit_redis_enabled: bool = True
 
     @property

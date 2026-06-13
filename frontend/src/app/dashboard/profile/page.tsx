@@ -9,12 +9,17 @@ import { KycStatusBadge } from "@/components/transfers/status-badge";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Profile } from "@/types";
+import { formatPhoneNumber } from "@/lib/phone";
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, sendOtp, verifyPhoneOtp } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     api<Profile>("/profile").then(setProfile).catch(() => {});
@@ -47,16 +52,39 @@ export default function ProfilePage() {
     }
   };
 
+  const requestOtp = async (channel: "sms" | "whatsapp") => {
+    if (!user?.mobile_number) return;
+    setMessage("");
+    try {
+      const res = await sendOtp(user.mobile_number, channel, "verify_phone");
+      setOtpSent(true);
+      if (res.dev_code) setDevCode(res.dev_code);
+      setMessage(`Verification code sent via ${channel.toUpperCase()}`);
+    } catch {
+      setMessage("Failed to send verification code");
+    }
+  };
+
+  const submitOtp = async () => {
+    setVerifying(true);
+    try {
+      await verifyPhoneOtp(otpCode);
+      setMessage("Mobile number verified successfully");
+      setOtpSent(false);
+      setOtpCode("");
+      setDevCode(null);
+      await refreshUser();
+    } catch {
+      setMessage("Invalid or expired verification code");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const verifyEmail = async () => {
     await api("/auth/verify-email", { method: "POST" });
     await refreshUser();
     setMessage("Email marked as verified (placeholder)");
-  };
-
-  const verifyPhone = async () => {
-    await api("/auth/verify-phone", { method: "POST" });
-    await refreshUser();
-    setMessage("Phone marked as verified (placeholder)");
   };
 
   if (!profile) return <p>Loading...</p>;
@@ -76,14 +104,43 @@ export default function ProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="rounded-lg border bg-gray-50 p-4">
+            <p className="text-sm text-gray-500">Primary mobile number</p>
+            <p className="text-lg font-semibold">
+              {user?.mobile_number ? formatPhoneNumber(user.mobile_number) : "Not set"}
+            </p>
+            <p className={`mt-1 text-sm ${user?.phone_verified ? "text-green-700" : "text-amber-700"}`}>
+              {user?.phone_verified ? "Verified" : "Pending verification"}
+            </p>
+          </div>
+          {user?.email && <p className="text-sm text-gray-500">Email: {user.email}</p>}
+
+          {!user?.phone_verified && user?.mobile_number && (
+            <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+              <p className="text-sm font-medium text-amber-900">Verify your mobile number</p>
+              {!otpSent ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => requestOtp("sms")}>Send SMS Code</Button>
+                  <Button variant="outline" size="sm" onClick={() => requestOtp("whatsapp")}>Send WhatsApp Code</Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {devCode && <p className="text-xs text-amber-800">Dev code: {devCode}</p>}
+                  <Label>Enter verification code</Label>
+                  <Input inputMode="numeric" value={otpCode} onChange={(e) => setOtpCode(e.target.value)} maxLength={6} />
+                  <Button size="sm" onClick={submitOtp} disabled={verifying || otpCode.length < 4}>
+                    {verifying ? "Verifying..." : "Verify Mobile"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {user?.email && (
             <Button variant="outline" size="sm" onClick={verifyEmail} disabled={user?.email_verified}>
               {user?.email_verified ? "Email Verified" : "Verify Email (Placeholder)"}
             </Button>
-            <Button variant="outline" size="sm" onClick={verifyPhone} disabled={user?.phone_verified}>
-              {user?.phone_verified ? "Phone Verified" : "Verify Phone (Placeholder)"}
-            </Button>
-          </div>
+          )}
           {message && <p className="text-sm text-green-700">{message}</p>}
         </CardContent>
       </Card>

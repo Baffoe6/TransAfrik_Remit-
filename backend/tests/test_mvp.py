@@ -44,8 +44,8 @@ def test_waitlist_join_integration():
     res = client.post("/api/v1/waitlist/join", json={
         "first_name": "Test",
         "last_name": "Lead",
-        "email": "waitlist-test@example.com",
         "mobile": "+27123456789",
+        "email": "waitlist-test@example.com",
         "country_from": "ZA",
         "country_to": "GH",
         "estimated_monthly_volume": "Under R5,000",

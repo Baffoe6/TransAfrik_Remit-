@@ -61,10 +61,11 @@ class AuditLogResponse(BaseModel):
 
 class CustomerListItem(BaseModel):
     id: int
-    email: str
-    phone: str | None
+    email: str | None
+    mobile_number: str | None
     first_name: str | None
     last_name: str | None
     kyc_status: str | None
+    status: str = "active"
     created_at: datetime
     transfer_count: int = 0

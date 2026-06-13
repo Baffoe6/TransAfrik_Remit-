@@ -49,7 +49,7 @@ def generate_payment_reference(
         currency="ZAR",
         customer_name=customer_name,
         customer_email=user.email,
-        customer_phone=user.phone,
+        customer_phone=user.mobile_number,
     )
     result = provider.generate_reference(request)
     if not result.success:

@@ -108,6 +108,7 @@ def _ensure_user(db, email: str, password: str, role: UserRole) -> User:
             email_verified=True,
             phone_verified=True,
             is_active=True,
+            status="active",
         )
         db.add(user)
         db.flush()
@@ -132,7 +133,10 @@ def seed():
                 print(f"Created demo agent: {settings.seed_agent_email}")
 
             customer = _ensure_user(db, settings.seed_customer_email, settings.seed_customer_password, UserRole.CUSTOMER)
-            customer.phone = "+27821234567"
+            customer.mobile_number = "+27821234567"
+            customer.first_name = "Thabo"
+            customer.last_name = "Molefe"
+            customer.phone_verified = True
 
             profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == customer.id).first()
             if not profile:
@@ -152,7 +156,7 @@ def seed():
 
             beneficiary = (
                 db.query(Beneficiary)
-                .filter(Beneficiary.user_id == customer.id, Beneficiary.mobile_wallet_number == "233241234567")
+                .filter(Beneficiary.user_id == customer.id, Beneficiary.mobile_wallet_number == "+233241234567")
                 .first()
             )
             if not beneficiary:
@@ -163,7 +167,7 @@ def seed():
                     account_name="Ama Osei",
                     country="GH",
                     mobile_money_provider="MTN Ghana",
-                    mobile_wallet_number="233241234567",
+                    mobile_wallet_number="+233241234567",
                     relationship_to_sender="Sister",
                     status=BeneficiaryStatus.APPROVED,
                 )

@@ -95,7 +95,9 @@ export function Header() {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <span className="hidden text-sm text-gray-500 sm:inline">{user.email}</span>
+              <span className="hidden text-sm text-gray-500 sm:inline">
+                {user.mobile_number || user.email || `ID ${user.id}`}
+              </span>
               <Button variant="ghost" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Logout</span>

@@ -36,6 +36,27 @@ def get_current_user(
     return user
 
 
+def get_optional_user(
+    db: Annotated[Session, Depends(get_db)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+) -> User | None:
+    if not credentials:
+        return None
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "access":
+        return None
+    jti = payload.get("jti")
+    if jti:
+        from app.redis.session_blacklist import is_token_blacklisted
+
+        if is_token_blacklisted(jti):
+            return None
+    user = db.query(User).filter(User.id == int(payload["sub"])).first()
+    if not user or not user.is_active:
+        return None
+    return user
+
+
 def require_roles(*roles: UserRole):
     def checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
         if current_user.role not in roles:

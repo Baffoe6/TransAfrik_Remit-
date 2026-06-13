@@ -28,9 +28,9 @@ def test_storage_save_file():
 
 
 def test_otp_store_and_verify():
-    store_otp("user+27123456789", "123456", ttl=60)
-    assert verify_otp("user+27123456789", "123456") is True
-    assert verify_otp("user+27123456789", "123456") is False
+    store_otp("test", "user+27123456789", "123456", ttl=60)
+    assert verify_otp("test", "user+27123456789", "123456") is True
+    assert verify_otp("test", "user+27123456789", "123456") is False
 
 
 def test_session_blacklist():

@@ -100,9 +100,9 @@ def notify_transfer_lifecycle(
         if tmpl.channel == NotificationChannel.EMAIL:
             recipient = user.email
         elif tmpl.channel in (NotificationChannel.SMS, NotificationChannel.WHATSAPP):
-            recipient = user.phone or ""
+            recipient = user.mobile_number or ""
         else:
-            recipient = user.phone or ""
+            recipient = user.mobile_number or ""
         if not recipient:
             continue
         try:

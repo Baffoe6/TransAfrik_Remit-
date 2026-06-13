@@ -14,7 +14,12 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
   const [form, setForm] = useState({
-    email: "", password: "", phone: "", first_name: "", last_name: "", invite_code: "",
+    mobile_number: "",
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    invite_code: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,8 +30,11 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({
-        ...form,
-        phone: form.phone || undefined,
+        mobile_number: form.mobile_number,
+        email: form.email || undefined,
+        password: form.password,
+        first_name: form.first_name,
+        last_name: form.last_name,
         invite_code: form.invite_code || undefined,
       });
       router.push("/dashboard");
@@ -45,7 +53,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Start sending money to Ghana with TransAfrik Remit</CardDescription>
+          <CardDescription>Register with your mobile number — email is optional</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -61,16 +69,25 @@ export default function RegisterPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={form.email} onChange={update("email")} required />
+              <Label htmlFor="mobile_number">Mobile Number</Label>
+              <Input
+                id="mobile_number"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={form.mobile_number}
+                onChange={update("mobile_number")}
+                placeholder="+27721234567"
+                required
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (optional)</Label>
-              <Input id="phone" type="tel" value={form.phone} onChange={update("phone")} placeholder="+27..." />
+              <Label htmlFor="email">Email (optional)</Label>
+              <Input id="email" type="email" value={form.email} onChange={update("email")} placeholder="you@email.com" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="invite_code">Pilot Invite Code</Label>
-              <Input id="invite_code" value={form.invite_code} onChange={update("invite_code")} placeholder="Required during pilot launch" />
+              <Input id="invite_code" value={form.invite_code} onChange={update("invite_code")} placeholder="If required during pilot" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

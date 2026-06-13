@@ -126,8 +126,8 @@ export default function BeneficiariesPage() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Wallet Number</Label>
-                    <Input value={form.mobile_wallet_number} onChange={(e) => setForm({ ...form, mobile_wallet_number: e.target.value })} placeholder="233..." required />
+                    <Label>Beneficiary Mobile Number</Label>
+                    <Input value={form.mobile_wallet_number} onChange={(e) => setForm({ ...form, mobile_wallet_number: e.target.value })} placeholder="+233201234567" required />
                   </div>
                 </>
               )}

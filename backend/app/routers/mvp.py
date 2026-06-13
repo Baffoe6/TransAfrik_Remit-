@@ -20,8 +20,8 @@ router = APIRouter(tags=["MVP"])
 class WaitlistJoinRequest(BaseModel):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
-    email: EmailStr
-    mobile: str | None = None
+    mobile: str = Field(min_length=8, max_length=30)
+    email: EmailStr | None = None
     country_from: str = "ZA"
     country_to: str = Field(min_length=2, max_length=2)
     estimated_monthly_volume: str | None = None
@@ -33,7 +33,7 @@ def join_waitlist(data: WaitlistJoinRequest, db: Annotated[Session, Depends(get_
         db,
         first_name=data.first_name,
         last_name=data.last_name,
-        email=str(data.email),
+        email=str(data.email) if data.email else None,
         mobile=data.mobile,
         country_from=data.country_from,
         country_to=data.country_to,

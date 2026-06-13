@@ -2,12 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "./api";
+import { getDeviceId, getDeviceLabel } from "./device";
 
 export interface User {
   id: number;
-  email: string;
-  phone: string | null;
+  mobile_number: string | null;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
   role: string;
+  status: string;
   email_verified: boolean;
   phone_verified: boolean;
 }
@@ -16,32 +20,55 @@ interface TokenResponse {
   access_token: string | null;
   refresh_token: string | null;
   mfa_required?: boolean;
+  step_up_required?: boolean;
+  step_up_mobile?: string;
+  risk_score?: number;
+  risk_level?: string;
+}
+
+interface OtpSendResponse {
+  sent: boolean;
+  channel: string;
+  message: string;
+  dev_code?: string;
 }
 
 interface LoginResult {
   user: User | null;
   mfaRequired: boolean;
+  stepUpRequired: boolean;
+  stepUpMobile?: string;
+  riskScore?: number;
+  riskLevel?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string, mfaCode?: string) => Promise<LoginResult>;
+  login: (identifier: string, password: string, mfaCode?: string) => Promise<LoginResult>;
+  loginWithOtp: (mobile: string, code: string) => Promise<LoginResult>;
+  completeStepUp: (mobile: string, code: string) => Promise<LoginResult>;
+  sendOtp: (mobile: string, channel: "sms" | "whatsapp", purpose: "login" | "verify_phone" | "step_up") => Promise<OtpSendResponse>;
+  verifyPhoneOtp: (code: string) => Promise<void>;
   register: (data: RegisterData) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
 interface RegisterData {
-  email: string;
+  mobile_number: string;
   password: string;
-  phone?: string;
   first_name: string;
   last_name: string;
+  email?: string;
   invite_code?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+function devicePayload() {
+  return { device_id: getDeviceId(), device_label: getDeviceLabel() };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -70,19 +97,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string, mfaCode?: string): Promise<LoginResult> => {
-    const tokens = await api<TokenResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password, mfa_code: mfaCode }),
-    });
-    if (tokens.mfa_required) {
-      return { user: null, mfaRequired: true };
-    }
+  const storeTokens = async (tokens: TokenResponse): Promise<User> => {
     localStorage.setItem("access_token", tokens.access_token!);
     localStorage.setItem("refresh_token", tokens.refresh_token!);
     const me = await api<User>("/auth/me");
     setUser(me);
-    return { user: me, mfaRequired: false };
+    return me;
+  };
+
+  const login = async (identifier: string, password: string, mfaCode?: string): Promise<LoginResult> => {
+    const tokens = await api<TokenResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ identifier, password, mfa_code: mfaCode, ...devicePayload() }),
+    });
+    if (tokens.mfa_required) {
+      return { user: null, mfaRequired: true, stepUpRequired: false };
+    }
+    if (tokens.step_up_required) {
+      return {
+        user: null,
+        mfaRequired: false,
+        stepUpRequired: true,
+        stepUpMobile: tokens.step_up_mobile ?? undefined,
+        riskScore: tokens.risk_score,
+        riskLevel: tokens.risk_level,
+      };
+    }
+    const me = await storeTokens(tokens);
+    return { user: me, mfaRequired: false, stepUpRequired: false, riskScore: tokens.risk_score };
+  };
+
+  const sendOtp = async (mobile: string, channel: "sms" | "whatsapp", purpose: "login" | "verify_phone" | "step_up") => {
+    return api<OtpSendResponse>("/auth/otp/send", {
+      method: "POST",
+      body: JSON.stringify({ mobile_number: mobile, channel, purpose }),
+    });
+  };
+
+  const loginWithOtp = async (mobile: string, code: string): Promise<LoginResult> => {
+    const tokens = await api<TokenResponse>("/auth/login/otp", {
+      method: "POST",
+      body: JSON.stringify({ mobile_number: mobile, code, trust_device: true, ...devicePayload() }),
+    });
+    const me = await storeTokens(tokens);
+    return { user: me, mfaRequired: false, stepUpRequired: false };
+  };
+
+  const completeStepUp = async (mobile: string, code: string): Promise<LoginResult> => {
+    const tokens = await api<TokenResponse>("/auth/login/step-up", {
+      method: "POST",
+      body: JSON.stringify({ mobile_number: mobile, code, trust_device: true, ...devicePayload() }),
+    });
+    const me = await storeTokens(tokens);
+    return { user: me, mfaRequired: false, stepUpRequired: false };
+  };
+
+  const verifyPhoneOtp = async (code: string) => {
+    await api("/auth/otp/verify-phone", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+    await refreshUser();
   };
 
   const register = async (data: RegisterData) => {
@@ -112,7 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{
+      user, loading, login, loginWithOtp, completeStepUp, sendOtp, verifyPhoneOtp, register, logout, refreshUser,
+    }}>
       {children}
     </AuthContext.Provider>
   );

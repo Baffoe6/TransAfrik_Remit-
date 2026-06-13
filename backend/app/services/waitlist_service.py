@@ -1,11 +1,11 @@
 import csv
 import io
-from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from app.models.waitlist import WaitlistLead
 from app.repositories.waitlist_repository import WaitlistRepository
+from app.utils.phone import validate_phone_number
 
 
 def submit_waitlist_lead(
@@ -13,21 +13,26 @@ def submit_waitlist_lead(
     *,
     first_name: str,
     last_name: str,
-    email: str,
-    mobile: str | None,
+    email: str | None,
+    mobile: str,
     country_from: str,
     country_to: str,
     estimated_monthly_volume: str | None,
 ) -> WaitlistLead:
     repo = WaitlistRepository(db)
-    existing = repo.get_by_email(email.strip().lower())
+    normalized_mobile = validate_phone_number(mobile)
+    existing = repo.get_by_mobile(normalized_mobile)
     if existing:
         return existing
+    if email:
+        existing_email = repo.get_by_email(email.strip().lower())
+        if existing_email:
+            return existing_email
     lead = WaitlistLead(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
-        email=email.strip().lower(),
-        mobile=mobile.strip() if mobile else None,
+        email=email.strip().lower() if email else None,
+        mobile=normalized_mobile,
         country_from=country_from.upper(),
         country_to=country_to.upper(),
         estimated_monthly_volume=estimated_monthly_volume,
@@ -66,12 +71,13 @@ def export_waitlist_csv(db: Session) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "id", "first_name", "last_name", "email", "mobile",
+        "id", "first_name", "last_name", "mobile", "email",
         "country_from", "country_to", "estimated_monthly_volume", "created_at",
     ])
     for l in leads:
         writer.writerow([
-            l.id, l.first_name, l.last_name, l.email, l.mobile or "",
+            l.id, l.first_name, l.last_name, l.mobile or "",
+            l.email or "",
             l.country_from, l.country_to, l.estimated_monthly_volume or "",
             l.created_at.isoformat() if l.created_at else "",
         ])

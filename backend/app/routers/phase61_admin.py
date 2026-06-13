@@ -123,8 +123,8 @@ def infrastructure_webhook_queue(admin: AdminUser, limit: int = 20):
 
 @router.post("/infrastructure/test-otp")
 def infrastructure_test_otp(data: OtpTestRequest, admin: AdminUser):
-    store_otp(data.identifier, data.code, ttl=120)
-    verified = verify_otp(data.identifier, data.code)
+    store_otp("test", data.identifier, data.code, ttl=120)
+    verified = verify_otp("test", data.identifier, data.code)
     return {"stored": True, "verified": verified}
 
 
