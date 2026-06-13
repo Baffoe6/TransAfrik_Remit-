@@ -70,7 +70,12 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        if self.is_production or self.environment.lower() == "staging":
+            for origin in ("https://trans-afrik-remit.vercel.app",):
+                if origin not in origins:
+                    origins.append(origin)
+        return origins
 
     @property
     def effective_cors_origin_regex(self) -> str | None:
