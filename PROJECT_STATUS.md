@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-TransAfrik Remit has been upgraded from a pilot/demo platform to a **production-ready remittance facilitation MVP**. The system supports customer onboarding, KYC, beneficiary management, transfer requests, admin operations, compliance review, and partner abstraction — with **mock partner integrations** (no live money movement).
+TransAfrik Remit has been upgraded from a pilot/demo platform to a **production-ready remittance facilitation MVP**. The system supports customer onboarding (web + mobile), KYC, beneficiary management, transfer requests, admin operations, compliance review, and partner abstraction — with **mock partner integrations** (no live money movement).
 
 ---
 
@@ -81,12 +81,13 @@ TransAfrik Remit has been upgraded from a pilot/demo platform to a **production-
 | Frontend | Next.js App Router + TypeScript strict |
 | Storage | Local / S3 abstraction |
 | Cache | Redis (OTP, sessions, rate limits) |
+| Mobile | React Native + Expo (Phase 11) |
 
 ---
 
 ## Migrations
 
-Latest revision: **010_mobile_first_identity**
+Latest revision: **011_otp_device_trust**
 
 ```bash
 cd backend && alembic upgrade head
@@ -106,6 +107,22 @@ cd backend && alembic upgrade head
 - [x] WhatsApp OTP verification (channel=whatsapp)
 - [x] Passwordless OTP login (`POST /auth/login/otp`)
 - [x] Device trust + risk scoring (step-up on high-risk password login)
+- [x] Password reset via OTP (`POST /auth/password/forgot`, `POST /auth/password/reset`)
+
+### Phase 11 — Mobile Application (Expo)
+- [x] React Native + Expo SDK 52 + TypeScript in `/mobile`
+- [x] Shared API client (Axios) → `https://api.ipaygo.co.za`
+- [x] Auth: register, login, OTP login, forgot/reset password
+- [x] Dashboard, beneficiaries CRUD + search, transfers create/track/receipt
+- [x] KYC upload (ID, passport, POA, selfie capture)
+- [x] Referrals, wallet, profile, dark mode
+- [x] Offline cache (dashboard), push notification stub, biometric service
+- [x] Future-ready partner registry (Flutterwave, Mukuru, Onafriq, Veengu)
+- [x] EAS build config (`eas.json`), deployment guide, env template
+- [x] Jest test suite (`npm test` — 3 passed)
+- [ ] EAS production builds (Android APK/AAB, iOS IPA) — run via `eas build`
+- [ ] Push token registration with backend
+- [ ] Biometric login wired to auth UI
 
 ---
 
@@ -135,11 +152,12 @@ Set `SEED_DEMO_DATA=false` and `ENVIRONMENT=production` on Railway.
 ## Test Coverage
 
 ```bash
-cd backend && pytest tests/ -v    # 57 passed, 4 skipped (integration)
-cd frontend && npm test           # 5 passed
+cd backend && pytest tests/ -v    # 72 passed
+cd frontend && npm test           # 8 passed
+cd mobile && npm test             # 3 passed
 ```
 
-Key suites: `test_mvp.py`, `test_phase61_*.py`, `test_smoke.py`, `utils.test.ts`, `waitlist.test.ts`
+Key suites: `test_mvp.py`, `test_phase61_*.py`, `test_smoke.py`, `utils.test.ts`, `waitlist.test.ts`, `mobile/__tests__/*.test.ts`
 
 ---
 

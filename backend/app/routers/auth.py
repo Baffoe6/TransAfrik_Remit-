@@ -19,6 +19,8 @@ from app.schemas.auth import (
     OtpLoginRequest,
     OtpSendRequest,
     OtpVerifyPhoneRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
     RefreshRequest,
     RegisterRequest,
     StepUpLoginRequest,
@@ -34,6 +36,7 @@ from app.services.device_trust_service import (
 )
 from app.services.otp_service import (
     OTP_PURPOSE_LOGIN,
+    OTP_PURPOSE_PASSWORD_RESET,
     OTP_PURPOSE_STEP_UP,
     OTP_PURPOSE_VERIFY_PHONE,
     find_user_by_mobile,
@@ -251,6 +254,11 @@ def otp_send(
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
         user_id = user.id
+    elif data.purpose == OTP_PURPOSE_PASSWORD_RESET:
+        user = find_user_by_mobile(db, data.mobile_number)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
+        user_id = user.id
     elif data.purpose == OTP_PURPOSE_STEP_UP:
         stepup = get_stepup(data.mobile_number)
         if not stepup:
@@ -448,6 +456,36 @@ def trust_device(
     )
     db.commit()
     return {"device_id": device.id, "is_trusted": device.is_trusted}
+
+
+@router.post("/password/forgot")
+@limiter.limit("5/minute")
+def password_forgot(request: Request, data: PasswordResetRequest, db: Annotated[Session, Depends(get_db)]):
+    user = find_user_by_mobile(db, data.mobile_number)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
+    result = send_otp(mobile=data.mobile_number, channel="sms", purpose=OTP_PURPOSE_PASSWORD_RESET, user_id=user.id)
+    log_security_event(db, event_type=SecurityEventType.OTP_SENT, user_id=user.id, ip_address=get_client_ip(request), details="password_reset")
+    db.commit()
+    return result
+
+
+@router.post("/password/reset")
+@limiter.limit("5/minute")
+def password_reset(request: Request, data: PasswordResetConfirm, db: Annotated[Session, Depends(get_db)]):
+    user = find_user_by_mobile(db, data.mobile_number)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
+    try:
+        verify_otp_code(data.mobile_number, OTP_PURPOSE_PASSWORD_RESET, data.code)
+    except HTTPException:
+        log_security_event(db, event_type=SecurityEventType.OTP_FAILED, user_id=user.id, ip_address=get_client_ip(request), details="password_reset")
+        db.commit()
+        raise
+    user.password_hash = hash_password(data.new_password)
+    log_security_event(db, event_type=SecurityEventType.PASSWORD_CHANGED, user_id=user.id, ip_address=get_client_ip(request), details="password_reset_otp")
+    db.commit()
+    return {"message": "Password reset successfully"}
 
 
 @router.post("/refresh", response_model=TokenResponse)

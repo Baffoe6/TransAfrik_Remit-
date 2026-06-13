@@ -54,7 +54,7 @@ Demo customer, beneficiary, invite codes, and pilot stats are **not seeded** whe
 transafrik-remit/
 ├── frontend/          # Next.js 15+ (App Router), TypeScript, Tailwind, shadcn-style UI
 ├── backend/           # FastAPI, SQLAlchemy, Alembic, JWT auth
-├── mobile/            # Flutter customer app scaffold
+├── mobile/            # React Native (Expo) customer app — Phase 11
 ├── examples/          # Sample Mukuru batch CSV export
 ├── docker-compose.yml
 └── README.md
@@ -322,9 +322,11 @@ python -m app.seed
 - WhatsApp templates for transfer lifecycle events
 - Delivery logs via existing `notification_logs`
 
-### Flutter Mobile App
-- Scaffold in `mobile/` — auth, profile, KYC, beneficiaries, transfers, voucher, tracking
-- See `mobile/README.md`
+### React Native Mobile App (Phase 11)
+- Production Expo app in `mobile/` — auth, dashboard, KYC, beneficiaries, transfers, referrals, wallet
+- Stack: React Native, Expo SDK 52, TypeScript, React Query, Axios, Zustand, Secure Store
+- Builds: `npm run build:android` / `npm run build:ios` (EAS)
+- See [mobile/README.md](mobile/README.md) and [mobile/docs/DEPLOYMENT.md](mobile/docs/DEPLOYMENT.md)
 
 ### Operations Audit Trail
 - `operations_audit_logs` — batch, settlement, treasury, provider actions

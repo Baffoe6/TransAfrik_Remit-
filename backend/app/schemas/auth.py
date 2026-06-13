@@ -71,6 +71,26 @@ class StepUpLoginRequest(BaseModel):
         return validate_phone_number(v)
 
 
+class PasswordResetRequest(BaseModel):
+    mobile_number: str = Field(min_length=8, max_length=30)
+
+    @field_validator("mobile_number")
+    @classmethod
+    def normalize_mobile(cls, v: str) -> str:
+        return validate_phone_number(v)
+
+
+class PasswordResetConfirm(BaseModel):
+    mobile_number: str = Field(min_length=8, max_length=30)
+    code: str = Field(min_length=4, max_length=8)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("mobile_number")
+    @classmethod
+    def normalize_mobile(cls, v: str) -> str:
+        return validate_phone_number(v)
+
+
 class DeviceTrustRequest(BaseModel):
     device_id: int
     trusted: bool = True
