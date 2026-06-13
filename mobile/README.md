@@ -1,8 +1,10 @@
-# TransAfrik Remit — Mobile App (Phase 11)
+# TransAfrik Remit — Mobile App (v1.0 Preview)
 
-Production-ready **React Native** customer app built with **Expo** and **TypeScript**. Uses the same backend APIs as the web app.
+Premium **React Native** fintech app built with **Expo SDK 52** and **TypeScript**. Connects to production API at `https://api.ipaygo.co.za`.
 
-**API:** `https://api.ipaygo.co.za`
+## Brand
+
+Deep Green `#1B5E3B` · Gold `#C9A227` · Charcoal · White
 
 ## Stack
 
@@ -20,15 +22,19 @@ Production-ready **React Native** customer app built with **Expo** and **TypeScr
 
 ```
 mobile/src/
-├── api/           # Shared API client (Axios)
-├── components/    # UI primitives
-├── features/      # Domain modules (partners, etc.)
-├── navigation/    # Auth + main navigators
-├── screens/       # Customer screens
-├── services/      # Device, biometrics, notifications, offline cache
-├── store/         # Zustand (auth, theme)
-└── types/         # Shared models
+├── theme/           Design system (colors, typography, spacing)
+├── components/      Premium UI kit
+├── features/        auth, dashboard, transfers, beneficiaries, kyc, activity, profile, support
+├── navigation/      5-tab bottom nav + stack
+├── api/             Axios client + domain APIs (incl. payments, support)
+├── store/           Zustand (auth, onboarding, send flow, settings)
+├── services/        Secure Store, biometrics, offline cache
+└── utils/           Currency, phone, validation
 ```
+
+## Tabs
+
+Home · Send · Beneficiaries · Activity · Profile
 
 ## Features
 

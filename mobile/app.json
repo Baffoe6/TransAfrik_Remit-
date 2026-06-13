@@ -2,7 +2,7 @@
   "expo": {
     "name": "TransAfrik Remit",
     "slug": "transafrik-remit",
-    "version": "1.0.0",
+    "version": "1.0.0-preview",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -34,7 +34,15 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "plugins": [
@@ -47,10 +55,23 @@
         }
       ],
       "expo-local-authentication",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Capture selfie for KYC verification"
+        }
+      ]
     ],
     "extra": {
-      "apiUrl": "https://api.ipaygo.co.za"
+      "apiUrl": "https://api.ipaygo.co.za",
+      "eas": {
+        "projectId": "fadbd8c6-4c8a-4dd6-b520-2ff6644a66c9"
+      }
+    },
+    "owner": "baffoe6",
+    "updates": {
+      "url": "https://u.expo.dev/fadbd8c6-4c8a-4dd6-b520-2ff6644a66c9"
     }
   }
 }

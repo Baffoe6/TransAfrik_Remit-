@@ -6,11 +6,4 @@ export { Badge, StepIndicator, TrustRow } from "./Badge";
 export { Skeleton, LoadingState, EmptyState, ErrorState, OfflineBanner } from "./Feedback";
 export { ModalSheet, AlertBanner } from "./ModalSheet";
 export { ErrorBoundary } from "./ErrorBoundary";
-import { H1, Caption } from "./Card";
-
-export function Title({ children }: { children: React.ReactNode }) {
-  return <H1>{children}</H1>;
-}
-export function Muted({ children }: { children: React.ReactNode }) {
-  return <Caption>{children}</Caption>;
-}
+export { Title, Muted } from "./ui";

@@ -12,7 +12,7 @@ Build a shareable **Android APK** for internal QA using **Expo EAS** (`preview` 
 |------|----------------|
 | Node.js 20+ | `node -v` |
 | Expo account | [expo.dev/signup](https://expo.dev/signup) |
-| EAS CLI | `npm install -g eas-cli` |
+| EAS CLI | Included in project — use `npm run eas:login` (or `npx eas`) |
 | Git repo | Project at `mobile/` |
 
 ---
@@ -22,9 +22,12 @@ Build a shareable **Android APK** for internal QA using **Expo EAS** (`preview` 
 ```bash
 cd mobile
 npm install
-eas login
-eas init
+npm run eas:login
+npm run eas:init
 ```
+
+> **Windows note:** If your prompt is already `...\mobile>`, do **not** run `cd mobile` again.
+> **EAS CLI:** Installed locally — always use `npm run eas:login` or `npx eas`, not bare `eas`.
 
 `eas init` will:
 - Link the project to your Expo account
@@ -175,7 +178,9 @@ eas credentials --platform android
 
 | Issue | Fix |
 |-------|-----|
-| `EAS project not configured` | Run `eas init` in `mobile/` |
+| `EAS project not configured` | Run `npm run eas:init` in `mobile/` |
+| `'eas' is not recognized` | Run `npm install` then use `npm run eas:login` or `npx eas` |
+| `Cannot find path ...\mobile\mobile` | You're already in `mobile/` — skip the extra `cd mobile` |
 | Build fails — missing assets | Verify `mobile/assets/icon.png` exists |
 | `expo-asset` error | Run `npx expo install expo-asset` |
 | APK won't install | Uninstall older version with same package name |
@@ -188,14 +193,17 @@ eas credentials --platform android
 ## Quick command summary
 
 ```bash
-# One-time setup
-cd mobile && npm install && eas login && eas init
+# One-time setup (from repo root)
+cd mobile
+npm install
+npm run eas:login
+npm run eas:init
 
 # Build internal testing APK
 npm run build:android:preview
 
 # Check build status
-eas build:list --platform android --limit 5
+npx eas build:list --platform android --limit 5
 
 # View signing credentials
 eas credentials --platform android

@@ -1,39 +1,61 @@
 import { NavigationContainer, DarkTheme, DefaultTheme } from "@react-navigation/native";
-import { useColorScheme } from "react-native";
+import { useColorScheme, ActivityIndicator, View } from "react-native";
+import { useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
+import { useOnboardingStore } from "./store/onboardingStore";
+import { useSettingsStore } from "./store/settingsStore";
 import { AuthNavigator } from "./navigation/AuthNavigator";
 import { MainNavigator } from "./navigation/MainNavigator";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useAppTheme } from "./theme";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
+  defaultOptions: {
+    queries: { staleTime: 60_000, retry: 2, refetchOnReconnect: true },
+  },
 });
 
-export default function App() {
+function RootNav() {
   const scheme = useColorScheme();
+  const theme = useAppTheme();
   const { user, initialized, bootstrap } = useAuthStore();
+  const onboardingComplete = useOnboardingStore((s) => s.complete);
+  const loadOnboarding = useOnboardingStore((s) => s.load);
+  const loadSettings = useSettingsStore((s) => s.load);
 
   useEffect(() => {
     bootstrap();
-  }, [bootstrap]);
+    loadOnboarding();
+    loadSettings();
+  }, [bootstrap, loadOnboarding, loadSettings]);
 
-  if (!initialized) {
+  if (!initialized || onboardingComplete === null) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#1B5E3B" }}>
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.primaryDark }}>
+        <ActivityIndicator size="large" color="#C9A227" />
       </View>
     );
   }
 
+  const navTheme = scheme === "dark" ? DarkTheme : DefaultTheme;
+  navTheme.colors.primary = theme.primary;
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <NavigationContainer theme={scheme === "dark" ? DarkTheme : DefaultTheme}>
-        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-        {user ? <MainNavigator /> : <AuthNavigator />}
-      </NavigationContainer>
-    </QueryClientProvider>
+    <NavigationContainer theme={navTheme}>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      {user ? <MainNavigator /> : <AuthNavigator showOnboarding={!onboardingComplete} />}
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <RootNav />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,71 +1,110 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import DashboardScreen from "../screens/dashboard/DashboardScreen";
-import BeneficiariesScreen from "../screens/beneficiaries/BeneficiariesScreen";
-import BeneficiaryFormScreen from "../screens/beneficiaries/BeneficiaryFormScreen";
-import TransfersScreen from "../screens/transfers/TransfersScreen";
-import CreateTransferScreen from "../screens/transfers/CreateTransferScreen";
-import TransferDetailScreen from "../screens/transfers/TransferDetailScreen";
-import KycScreen from "../screens/kyc/KycScreen";
-import ReferralScreen from "../screens/referral/ReferralScreen";
-import ProfileScreen from "../screens/profile/ProfileScreen";
-import WalletScreen from "../screens/wallet/WalletScreen";
-import { useThemeColors } from "../store/themeStore";
-import { useColorScheme, Text } from "react-native";
+import { Text } from "react-native";
+import HomeScreen from "../features/dashboard/HomeScreen";
+import SendHomeScreen from "../features/transfers/SendHomeScreen";
+import BeneficiariesScreen from "../features/beneficiaries/BeneficiariesScreen";
+import ActivityScreen from "../features/activity/ActivityScreen";
+import ProfileScreen from "../features/profile/ProfileScreen";
+import BeneficiaryFormScreen from "../features/beneficiaries/BeneficiaryFormScreen";
+import SendFlowScreen from "../features/transfers/SendFlowScreen";
+import PaymentSuccessScreen from "../features/transfers/PaymentSuccessScreen";
+import TransferTrackingScreen from "../features/transfers/TransferTrackingScreen";
+import ReceiptScreen from "../features/transfers/ReceiptScreen";
+import KycScreen from "../features/kyc/KycScreen";
+import ReferralScreen from "../features/referrals/ReferralScreen";
+import NotificationsScreen from "../features/notifications/NotificationsScreen";
+import SupportScreen from "../features/support/SupportScreen";
+import EditProfileScreen from "../features/profile/EditProfileScreen";
+import SecurityScreen from "../features/profile/SecurityScreen";
+import EnableBiometricsScreen from "../features/auth/EnableBiometricsScreen";
+import { useAppTheme } from "../theme";
+import type { PaymentReference } from "../api/payments";
 
 export type MainTabParamList = {
   Home: undefined;
   Send: undefined;
   Beneficiaries: undefined;
+  Activity: undefined;
   Profile: undefined;
 };
 
 export type RootStackParamList = {
-  Tabs: undefined;
+  Tabs: { screen?: keyof MainTabParamList } | undefined;
+  SendFlow: undefined;
+  PaymentSuccess: { transferId: number; reference: PaymentReference };
+  TransferTracking: { id: number };
+  Receipt: { id: number };
   BeneficiaryForm: { id?: number };
-  CreateTransfer: undefined;
-  TransferDetail: { id: number };
   Kyc: undefined;
   Referral: undefined;
-  Wallet: undefined;
+  Notifications: undefined;
+  Support: undefined;
+  EditProfile: undefined;
+  Security: undefined;
+  EnableBiometrics: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const c = useThemeColors(useColorScheme() === "dark");
-  return <Text style={{ color: focused ? c.primary : c.textMuted, fontSize: 11 }}>{label}</Text>;
+const TAB_ICONS: Record<keyof MainTabParamList, string> = {
+  Home: "🏠",
+  Send: "💸",
+  Beneficiaries: "👥",
+  Activity: "📋",
+  Profile: "👤",
+};
+
+function TabBarIcon({ name, focused }: { name: keyof MainTabParamList; focused: boolean }) {
+  const theme = useAppTheme();
+  return (
+    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
+      {TAB_ICONS[name]}
+    </Text>
+  );
 }
 
 function Tabs() {
-  const c = useThemeColors(useColorScheme() === "dark");
+  const theme = useAppTheme();
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: c.primary },
+      screenOptions={({ route }) => ({
+        headerStyle: { backgroundColor: theme.primaryDark },
         headerTintColor: "#fff",
-        tabBarStyle: { backgroundColor: c.card, borderTopColor: c.border },
-      }}
+        headerTitleStyle: { fontWeight: "600" },
+        tabBarStyle: { backgroundColor: theme.tabBar, borderTopColor: theme.border, height: 60, paddingBottom: 8 },
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textSecondary,
+        tabBarIcon: ({ focused }) => <TabBarIcon name={route.name as keyof MainTabParamList} focused={focused} />,
+      })}
     >
-      <Tab.Screen name="Home" component={DashboardScreen} options={{ title: "Dashboard", tabBarIcon: ({ focused }) => <TabIcon label="Home" focused={focused} /> }} />
-      <Tab.Screen name="Send" component={TransfersScreen} options={{ title: "Transfers", tabBarIcon: ({ focused }) => <TabIcon label="Send" focused={focused} /> }} />
-      <Tab.Screen name="Beneficiaries" component={BeneficiariesScreen} options={{ title: "Beneficiaries", tabBarIcon: ({ focused }) => <TabIcon label="People" focused={focused} /> }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile", tabBarIcon: ({ focused }) => <TabIcon label="Me" focused={focused} /> }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: "Home" }} />
+      <Tab.Screen name="Send" component={SendHomeScreen} options={{ title: "Send" }} />
+      <Tab.Screen name="Beneficiaries" component={BeneficiariesScreen} options={{ title: "Beneficiaries" }} />
+      <Tab.Screen name="Activity" component={ActivityScreen} options={{ title: "Activity" }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
     </Tab.Navigator>
   );
 }
 
 export function MainNavigator() {
+  const theme = useAppTheme();
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.primaryDark }, headerTintColor: "#fff" }}>
       <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+      <Stack.Screen name="SendFlow" component={SendFlowScreen} options={{ title: "Send Money" }} />
+      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: "Pay Now" }} />
+      <Stack.Screen name="TransferTracking" component={TransferTrackingScreen} options={{ title: "Track Transfer" }} />
+      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: "Receipt" }} />
       <Stack.Screen name="BeneficiaryForm" component={BeneficiaryFormScreen} options={{ title: "Beneficiary" }} />
-      <Stack.Screen name="CreateTransfer" component={CreateTransferScreen} options={{ title: "New Transfer" }} />
-      <Stack.Screen name="TransferDetail" component={TransferDetailScreen} options={{ title: "Transfer" }} />
-      <Stack.Screen name="Kyc" component={KycScreen} options={{ title: "KYC" }} />
-      <Stack.Screen name="Referral" component={ReferralScreen} options={{ title: "Referrals" }} />
-      <Stack.Screen name="Wallet" component={WalletScreen} options={{ title: "Wallet" }} />
+      <Stack.Screen name="Kyc" component={KycScreen} options={{ title: "KYC Verification" }} />
+      <Stack.Screen name="Referral" component={ReferralScreen} options={{ title: "Refer & Earn" }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: "Notifications" }} />
+      <Stack.Screen name="Support" component={SupportScreen} options={{ title: "Support" }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: "Edit Profile" }} />
+      <Stack.Screen name="Security" component={SecurityScreen} options={{ title: "Security" }} />
+      <Stack.Screen name="EnableBiometrics" component={EnableBiometricsScreen} options={{ title: "Biometrics" }} />
     </Stack.Navigator>
   );
 }

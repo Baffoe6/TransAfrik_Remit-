@@ -1,61 +1,57 @@
 # TransAfrik Remit — Mobile Status (Phase 11)
 
-**Release:** Mobile Application Foundation v1.0.0  
+**Release:** TransAfrik Remit Mobile v1.0 Preview  
 **Date:** June 2026  
-**Commit:** `feat(mobile): complete Phase 11 mobile application foundation`  
 **API:** [api.ipaygo.co.za](https://api.ipaygo.co.za)
 
 ---
 
 ## Executive Summary
 
-Phase 11 delivers a **production-ready React Native customer app** using **Expo SDK 52** and **TypeScript**. The mobile app shares the same backend APIs as the web application at `https://api.ipaygo.co.za/api/v1`.
-
-Flutter scaffold has been fully replaced. The app supports Android phones/tablets and iPhone/iPad with dark mode and offline dashboard caching.
+Premium **fintech-grade** React Native app (Expo SDK 52 + TypeScript) for African migrant customers. Full design system, 5-step send flow, payment vouchers, KYC tracker, activity/receipts, support, and production API integration.
 
 ---
 
-## Completed Deliverables
+## Architecture (v1.0 Preview)
 
-| Deliverable | Status | Location |
-|-------------|--------|----------|
-| Expo configuration | Done | `mobile/app.json`, `mobile/eas.json` |
-| Mobile assets | Done | `mobile/assets/` |
-| Navigation (auth + tabs + stack) | Done | `mobile/src/navigation/` |
-| Authentication screens | Done | `mobile/src/screens/auth/` |
-| Dashboard screens | Done | `mobile/src/screens/dashboard/` |
-| Beneficiaries module | Done | `mobile/src/screens/beneficiaries/` |
-| Transfer module | Done | `mobile/src/screens/transfers/` |
-| Profile / wallet / KYC / referral | Done | `mobile/src/screens/` |
-| Shared API client | Done | `mobile/src/api/` |
-| TypeScript models | Done | `mobile/src/types/` |
-| Mobile README | Done | `mobile/README.md` |
-| Environment configuration | Done | `mobile/.env.example` |
-| Architecture diagram | Done | `mobile/docs/ARCHITECTURE.md` |
-| EAS build instructions | Done | `mobile/docs/EAS_BUILD.md` |
-| Jest test suite | Done | `mobile/__tests__/` (3 tests) |
+```
+mobile/src/
+├── theme/          Design tokens (green, gold, charcoal)
+├── components/     Premium UI kit
+├── features/       auth, dashboard, transfers, beneficiaries, kyc, activity, profile, support, referrals, notifications
+├── navigation/     5-tab + stack navigators
+├── api/            auth, transfers, payments, support, kyc, dashboard
+├── store/          auth, onboarding, settings, send flow
+├── services/       secure storage, biometrics, offline cache
+└── utils/          currency, phone, validation, constants
+```
 
 ---
 
 ## Feature Matrix
 
 ### Authentication
-- [x] Mobile number registration (required) + optional email
-- [x] Login with mobile or email + password
+- [x] Mobile + 4-digit PIN login (primary)
+- [x] Email + password login (secondary)
 - [x] OTP login (SMS / WhatsApp)
-- [x] Password reset via OTP
-- [x] Device trust payload on login
-- [x] Step-up verification support
-- [ ] Biometric login wired to UI (service ready)
+- [x] Password/PIN reset via OTP
+- [x] Onboarding flow (3 slides)
+- [x] Biometric enable screen
+- [ ] Biometric auto-unlock on launch (placeholder)
 
 ### Customer
-- [x] Dashboard — profile %, KYC, wallet, transfers, referrals
-- [x] Beneficiaries — add, edit, delete, search
-- [x] Transfers — create, track, history, receipt detail
-- [x] KYC — ID, passport, POA upload + selfie capture
-- [x] Referrals — code, earnings, invite
-- [x] Dark mode (system + manual toggle)
-- [x] Offline cache (dashboard summary)
+- [x] Premium home dashboard with trust indicators
+- [x] 5-step send flow with payment voucher generation
+- [x] Transfer tracking with live polling (15s)
+- [x] Professional receipt screen
+- [x] Activity tab with filter/search
+- [x] Beneficiaries with favorites + search
+- [x] KYC progress tracker (0–100%) + camera/gallery upload
+- [x] Referrals with WhatsApp/SMS share
+- [x] Support FAQ + tickets + WhatsApp button
+- [x] Notifications center (push placeholder)
+- [x] Profile + security settings
+- [x] Offline cache (dashboard, beneficiaries, transfers)
 
 ### Notifications
 - [x] Push notification service stub
