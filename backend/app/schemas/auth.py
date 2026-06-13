@@ -105,6 +105,8 @@ class TokenResponse(BaseModel):
     step_up_mobile: str | None = None
     risk_score: int | None = None
     risk_level: str | None = None
+    mfa_setup_required: bool = False
+    password_change_required: bool = False
 
 
 class RefreshRequest(BaseModel):

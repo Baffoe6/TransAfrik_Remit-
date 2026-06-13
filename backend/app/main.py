@@ -33,6 +33,7 @@ from app.routers import (
     transfers,
     webhooks,
     whatsapp_bot,
+    security_center_admin,
 )
 from app.middleware.production import HttpsEnforcementMiddleware
 from app.redis.client import redis_health
@@ -104,6 +105,7 @@ app.include_router(referral.router, prefix="/api/v1")
 app.include_router(tenant.router, prefix="/api/v1")
 app.include_router(whatsapp_bot.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(security_center_admin.router, prefix="/api/v1")
 
 
 @app.get("/health")

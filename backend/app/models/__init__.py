@@ -13,6 +13,7 @@ from app.models.payment_reference import PaymentReference
 from app.models.payment_verification import PaymentVerification
 from app.models.provider import Provider
 from app.models.security import SecurityAuditLog, UserMfa, UserSession
+from app.models.security_hardening import AdminIpAllowlist, PasswordHistory, SecurityAlert
 from app.models.support_ticket import SupportTicket
 from app.models.transfer import Transfer
 from app.models.transfer_status_history import TransferStatusHistory
@@ -101,4 +102,7 @@ __all__ = [
     "SupportTicketNote",
     "WaitlistLead",
     "TrustedDevice",
+    "AdminIpAllowlist",
+    "SecurityAlert",
+    "PasswordHistory",
 ]

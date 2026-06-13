@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     whatsapp_provider: str = "console"
     otp_dev_expose_code: bool = True
     rate_limit_redis_enabled: bool = True
+    # Phase 12 — production security
+    admin_mfa_required: bool = True
+    account_lockout_max_attempts: int = 5
+    account_lockout_minutes: int = 30
+    password_max_age_days: int = 90
+    admin_ip_allowlist_enabled: bool = False
 
     @property
     def is_production(self) -> bool:

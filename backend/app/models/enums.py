@@ -301,3 +301,8 @@ class SecurityEventType(str, enum.Enum):
     OTP_FAILED = "otp_failed"
     STEP_UP_REQUIRED = "step_up_required"
     DEVICE_TRUSTED = "device_trusted"
+    ACCOUNT_LOCKED = "account_locked"
+    LOGIN_ANOMALY = "login_anomaly"
+    IP_BLOCKED = "ip_blocked"
+    PASSWORD_EXPIRED = "password_expired"
+    SESSION_REVOKED = "session_revoked"

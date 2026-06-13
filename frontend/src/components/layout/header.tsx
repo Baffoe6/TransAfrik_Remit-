@@ -31,6 +31,7 @@ export function Header() {
     { href: "/admin", label: "Dashboard" },
     { href: "/admin/operations", label: "Operations" },
     { href: "/admin/compliance", label: "Compliance" },
+    { href: "/admin/security-center", label: "Security" },
     { href: "/admin/waitlist", label: "Waitlist" },
     { href: "/admin/launch-readiness", label: "Launch Readiness" },
     { href: "/admin/corridors", label: "Corridors" },

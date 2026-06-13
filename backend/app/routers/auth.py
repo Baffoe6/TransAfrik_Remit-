@@ -27,6 +27,17 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.services.account_security_service import (
+    is_account_locked,
+    is_staff_user,
+    password_is_expired,
+    password_was_used_recently,
+    record_failed_login,
+    record_password_change,
+    record_successful_login,
+)
+from app.services.anomaly_detection_service import analyze_login_risk
+from app.services.ip_allowlist_service import is_ip_allowed_for_admin
 from app.services.device_trust_service import (
     compute_login_risk,
     fingerprint_device,
@@ -34,6 +45,7 @@ from app.services.device_trust_service import (
     record_device_login,
     set_device_trust,
 )
+from app.config import get_settings
 from app.services.otp_service import (
     OTP_PURPOSE_LOGIN,
     OTP_PURPOSE_PASSWORD_RESET,
@@ -62,6 +74,7 @@ from app.utils.security import (
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 optional_bearer = HTTPBearer(auto_error=False)
+settings = get_settings()
 
 
 def _issue_tokens(
@@ -73,6 +86,7 @@ def _issue_tokens(
     device_label: str | None = None,
     risk_score: int = 0,
     trust_device: bool = False,
+    mfa_setup_required: bool = False,
 ) -> TokenResponse:
     role = user.role.value if isinstance(user.role, UserRole) else user.role
     access = create_access_token(user.id, {"role": role})
@@ -103,15 +117,23 @@ def _issue_tokens(
         user_agent=request.headers.get("User-Agent"),
         details=f"risk_score={risk_score}",
     )
+    record_successful_login(db, user)
     db.commit()
-    return TokenResponse(access_token=access, refresh_token=refresh)
+    return TokenResponse(
+        access_token=access,
+        refresh_token=refresh,
+        mfa_setup_required=mfa_setup_required,
+        password_change_required=password_is_expired(user),
+    )
 
 
-def _staff_requires_mfa(db: Session, user: User) -> bool:
-    if user.role == UserRole.CUSTOMER:
-        return False
+def _staff_mfa_state(db: Session, user: User) -> dict:
+    if not is_staff_user(user):
+        return {"enabled": False, "setup_required": False, "verify_required": False}
     mfa = db.query(UserMfa).filter(UserMfa.user_id == user.id, UserMfa.is_enabled.is_(True)).first()
-    return mfa is not None
+    enabled = mfa is not None
+    setup_required = settings.admin_mfa_required and not enabled
+    return {"enabled": enabled, "setup_required": setup_required, "verify_required": enabled}
 
 
 def _find_user_by_identifier(db: Session, identifier: str) -> User | None:
@@ -165,20 +187,49 @@ def register(request: Request, data: RegisterRequest, db: Annotated[Session, Dep
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
 def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(get_db)]):
+    ip = get_client_ip(request)
     user = _find_user_by_identifier(db, data.identifier)
     if not user or not verify_password(data.password, user.password_hash):
+        record_failed_login(db, user, ip, data.identifier)
         log_security_event(
             db,
             event_type=SecurityEventType.LOGIN_FAILED,
-            ip_address=get_client_ip(request),
+            user_id=user.id if user else None,
+            ip_address=ip,
             details=f"Failed login attempt for {data.identifier}",
         )
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid mobile number, email, or password")
+
+    if is_account_locked(user):
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_423_LOCKED, detail="Account temporarily locked due to failed login attempts")
+
     if not user.is_active or user.status == "inactive":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated")
 
-    if _staff_requires_mfa(db, user):
+    if not is_ip_allowed_for_admin(db, user, ip):
+        log_security_event(
+            db,
+            event_type=SecurityEventType.IP_BLOCKED,
+            user_id=user.id,
+            ip_address=ip,
+            details="Admin login blocked by IP allowlist",
+        )
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Login not permitted from this IP address")
+
+    mfa_state = _staff_mfa_state(db, user)
+    if mfa_state["setup_required"]:
+        db.commit()
+        return _issue_tokens(
+            db, user, request,
+            device_id=data.device_id,
+            device_label=data.device_label,
+            mfa_setup_required=True,
+        )
+
+    if mfa_state["verify_required"]:
         if not data.mfa_code:
             db.commit()
             return TokenResponse(mfa_required=True)
@@ -187,18 +238,31 @@ def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(g
                 db,
                 event_type=SecurityEventType.MFA_FAILED,
                 user_id=user.id,
-                ip_address=get_client_ip(request),
+                ip_address=ip,
             )
             db.commit()
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid MFA code")
+        log_security_event(
+            db,
+            event_type=SecurityEventType.MFA_VERIFIED,
+            user_id=user.id,
+            ip_address=ip,
+        )
 
     fingerprint = fingerprint_device(data.device_id, request.headers.get("User-Agent"))
     risk = compute_login_risk(
         db,
         user_id=user.id,
         fingerprint=fingerprint,
-        ip_address=get_client_ip(request),
+        ip_address=ip,
         user_agent=request.headers.get("User-Agent"),
+    )
+    analyze_login_risk(
+        db,
+        user=user,
+        ip_address=ip,
+        risk_score=risk["risk_score"],
+        risk_factors=risk["factors"],
     )
 
     if risk["requires_step_up"] and user.mobile_number:
@@ -213,7 +277,7 @@ def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(g
             db,
             event_type=SecurityEventType.STEP_UP_REQUIRED,
             user_id=user.id,
-            ip_address=get_client_ip(request),
+            ip_address=ip,
             details=f"risk_score={risk['risk_score']} factors={risk['factors']}",
         )
         db.commit()
@@ -222,6 +286,14 @@ def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(g
             step_up_mobile=user.mobile_number,
             risk_score=risk["risk_score"],
             risk_level=risk["risk_level"],
+        )
+
+    if password_is_expired(user):
+        log_security_event(
+            db,
+            event_type=SecurityEventType.PASSWORD_EXPIRED,
+            user_id=user.id,
+            ip_address=ip,
         )
 
     return _issue_tokens(
@@ -482,7 +554,9 @@ def password_reset(request: Request, data: PasswordResetConfirm, db: Annotated[S
         log_security_event(db, event_type=SecurityEventType.OTP_FAILED, user_id=user.id, ip_address=get_client_ip(request), details="password_reset")
         db.commit()
         raise
-    user.password_hash = hash_password(data.new_password)
+    if password_was_used_recently(db, user, data.new_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password was used recently; choose a different password")
+    record_password_change(db, user, hash_password(data.new_password))
     log_security_event(db, event_type=SecurityEventType.PASSWORD_CHANGED, user_id=user.id, ip_address=get_client_ip(request), details="password_reset_otp")
     db.commit()
     return {"message": "Password reset successfully"}
@@ -503,6 +577,12 @@ def refresh_token(request: Request, data: RefreshRequest, db: Annotated[Session,
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
+    log_security_event(
+        db,
+        event_type=SecurityEventType.TOKEN_REFRESH,
+        user_id=user.id,
+        ip_address=get_client_ip(request),
+    )
     revoke_session(db, data.refresh_token)
     return _issue_tokens(db, user, request)
 
