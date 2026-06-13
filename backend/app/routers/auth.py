@@ -40,7 +40,8 @@ optional_bearer = HTTPBearer(auto_error=False)
 
 
 def _issue_tokens(db: Session, user: User, request: Request) -> TokenResponse:
-    access = create_access_token(user.id, {"role": user.role.value})
+    role = user.role.value if isinstance(user.role, UserRole) else user.role
+    access = create_access_token(user.id, {"role": role})
     refresh = create_refresh_token(user.id)
     create_session(
         db,
