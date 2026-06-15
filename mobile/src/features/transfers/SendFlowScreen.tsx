@@ -2,20 +2,64 @@ import { useEffect, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { AlertBanner, Body, Button, Caption, Card, H2, Input, Screen, StepIndicator } from "../../components";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  AlertBanner,
+  AmountDisplay,
+  Button,
+  FintechCard,
+  Input,
+  ListItem,
+  Screen,
+  StepIndicator,
+} from "../../components";
 import { beneficiariesApi, paymentsApi, transfersApi } from "../../api";
 import { useSendFlowStore } from "../../store/sendFlowStore";
 import { CORRIDORS } from "../../utils/constants";
 import { formatForeign, formatZAR } from "../../utils/format";
-import { spacing } from "../../theme/spacing";
+import { radius, spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { Beneficiary } from "../../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "SendFlow">;
 
+const STEP_LABELS = ["Corridor", "Amount", "Recipient", "Payment", "Review"];
+
+function SelectableRow({
+  selected,
+  onPress,
+  children,
+}: {
+  selected: boolean;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
+  const theme = useAppTheme();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.75}
+      style={{
+        padding: spacing.md,
+        borderWidth: selected ? 2 : 1,
+        borderColor: selected ? theme.primary : theme.border,
+        borderRadius: radius.lg,
+        marginBottom: spacing.sm,
+        backgroundColor: selected ? theme.primaryMuted : theme.surface,
+        flexDirection: "row",
+        alignItems: "center",
+      }}
+    >
+      {children}
+      {selected ? <Ionicons name="checkmark-circle" size={22} color={theme.primary} style={{ marginLeft: "auto" }} /> : null}
+    </TouchableOpacity>
+  );
+}
+
 export default function SendFlowScreen({ navigation }: Props) {
   const flow = useSendFlowStore();
+  const theme = useAppTheme();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -73,13 +117,14 @@ export default function SendFlowScreen({ navigation }: Props) {
       if (!useSendFlowStore.getState().quote) return;
     }
     if (flow.step === 3 && !flow.beneficiary) {
-      setError("Select a beneficiary");
+      setError("Select a recipient");
       return;
     }
     if (flow.step === 4 && !flow.paymentMethod) {
       setError("Select a payment method");
       return;
     }
+    setError("");
     if (flow.step < 5) flow.setStep(flow.step + 1);
     else confirm();
   };
@@ -87,87 +132,106 @@ export default function SendFlowScreen({ navigation }: Props) {
   return (
     <Screen scroll>
       <StepIndicator step={flow.step} total={5} />
-      <H2>Send Money</H2>
-      <Caption>Step {flow.step} of 5</Caption>
+      <Text style={[typography.label, { color: theme.textTertiary, marginBottom: 4 }]}>Step {flow.step} of 5</Text>
+      <Text style={[typography.h1, { color: theme.text, marginBottom: spacing.lg }]}>{STEP_LABELS[flow.step - 1]}</Text>
       {error ? <AlertBanner type="error" message={error} /> : null}
 
       {flow.step === 1 && (
         <>
-          <Body muted>Select destination country</Body>
+          <Text style={[typography.body, { color: theme.textSecondary, marginBottom: spacing.md }]}>Where are you sending money?</Text>
           {CORRIDORS.map((c) => (
-            <TouchableOpacity
-              key={c.code}
-              onPress={() => flow.setDestination(c.country, c.code, c.currency)}
-              style={{ padding: spacing.md, borderWidth: flow.corridorCode === c.code ? 2 : 1, borderColor: flow.corridorCode === c.code ? "#1B5E3B" : "#E5E7EB", borderRadius: 12, marginBottom: spacing.sm, flexDirection: "row", alignItems: "center", gap: 12 }}
-            >
-              <Text style={{ fontSize: 28 }}>{c.flag}</Text>
-              <View>
+            <SelectableRow key={c.code} selected={flow.corridorCode === c.code} onPress={() => flow.setDestination(c.country, c.code, c.currency)}>
+              <Text style={{ fontSize: 32, marginRight: spacing.md }}>{c.flag}</Text>
+              <View style={{ flex: 1 }}>
                 <Text style={typography.bodyBold}>{c.name}</Text>
-                <Caption>{c.currency} · {c.eta}</Caption>
+                <Text style={[typography.caption, { color: theme.textSecondary }]}>{c.currency} · {c.eta}</Text>
               </View>
-            </TouchableOpacity>
+            </SelectableRow>
           ))}
         </>
       )}
 
       {flow.step === 2 && (
         <>
-          <Input label="Amount (ZAR)" value={flow.amount} onChangeText={flow.setAmount} keyboardType="decimal-pad" />
-          <Button title="Get Live Quote" onPress={fetchQuote} variant="outline" loading={loading} />
+          <FintechCard variant="elevated">
+            <Input label="You send (ZAR)" value={flow.amount} onChangeText={flow.setAmount} keyboardType="decimal-pad" />
+            <Button title="Get live quote" onPress={fetchQuote} variant="outline" loading={loading} />
+          </FintechCard>
           {flow.quote && (
-            <Card>
-              <Caption>You send</Caption>
-              <Text style={typography.amount}>{formatZAR(flow.quote.send_amount_zar)}</Text>
-              <Caption>Fee: {formatZAR(flow.quote.fee_zar)} · Rate: {flow.quote.exchange_rate}</Caption>
-              <Caption>Recipient gets: {formatForeign(flow.quote.receive_amount_ghs, flow.currency)}</Caption>
-            </Card>
+            <FintechCard variant="hero" padding="lg">
+              <AmountDisplay label="You send" amount={formatZAR(flow.quote.send_amount_zar)} light />
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: spacing.md }} />
+              <AmountDisplay label="They receive" amount={formatForeign(flow.quote.receive_amount_ghs, flow.currency)} sublabel={`Fee ${formatZAR(flow.quote.fee_zar)} · Rate ${flow.quote.exchange_rate}`} size="sm" light />
+            </FintechCard>
           )}
         </>
       )}
 
       {flow.step === 3 && (
         <>
-          <Body muted>Select beneficiary</Body>
-          {filteredBeneficiaries.map((b: Beneficiary) => (
-            <TouchableOpacity key={b.id} onPress={() => flow.setBeneficiary(b)} style={{ padding: spacing.md, borderWidth: flow.beneficiary?.id === b.id ? 2 : 1, borderColor: flow.beneficiary?.id === b.id ? "#1B5E3B" : "#E5E7EB", borderRadius: 12, marginBottom: spacing.sm }}>
-              <Text style={typography.bodyBold}>{b.full_name}</Text>
-              <Caption>{b.beneficiary_type} · {b.mobile_wallet_number ?? b.bank_account_number ?? "—"}</Caption>
-            </TouchableOpacity>
-          ))}
-          <Button title="Add New Beneficiary" onPress={() => navigation.navigate("BeneficiaryForm", {})} variant="outline" />
+          <FlatList
+            data={filteredBeneficiaries}
+            keyExtractor={(b) => String(b.id)}
+            scrollEnabled={false}
+            renderItem={({ item }: { item: Beneficiary }) => (
+              <SelectableRow selected={flow.beneficiary?.id === item.id} onPress={() => flow.setBeneficiary(item)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={typography.bodyBold}>{item.full_name}</Text>
+                  <Text style={[typography.caption, { color: theme.textSecondary }]}>{item.beneficiary_type.replace("_", " ")} · {item.mobile_wallet_number ?? item.bank_account_number ?? "—"}</Text>
+                </View>
+              </SelectableRow>
+            )}
+            ListEmptyComponent={<Text style={{ color: theme.textSecondary, marginBottom: spacing.md }}>No recipients for this corridor</Text>}
+          />
+          <Button title="Add new recipient" onPress={() => navigation.navigate("BeneficiaryForm", {})} variant="outline" />
         </>
       )}
 
       {flow.step === 4 && (
         <>
-          <Body muted>Choose payment method</Body>
           {methods.map((m) => (
-            <TouchableOpacity key={m.id} onPress={() => flow.setPaymentMethod(m)} style={{ padding: spacing.md, borderWidth: flow.paymentMethod?.id === m.id ? 2 : 1, borderColor: flow.paymentMethod?.id === m.id ? "#1B5E3B" : "#E5E7EB", borderRadius: 12, marginBottom: spacing.sm }}>
-              <Text style={typography.bodyBold}>{m.name}</Text>
-              <Caption>{m.description ?? m.provider}</Caption>
-            </TouchableOpacity>
+            <SelectableRow key={m.id} selected={flow.paymentMethod?.id === m.id} onPress={() => flow.setPaymentMethod(m)}>
+              <View style={{ width: 44, height: 44, borderRadius: radius.md, backgroundColor: theme.primaryMuted, alignItems: "center", justifyContent: "center", marginRight: spacing.md }}>
+                <Ionicons name="card" size={22} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={typography.bodyBold}>{m.name}</Text>
+                <Text style={[typography.caption, { color: theme.textSecondary }]}>{m.description ?? m.provider}</Text>
+              </View>
+            </SelectableRow>
           ))}
-          <Card><Caption>Flutterwave card/link — coming soon</Caption></Card>
         </>
       )}
 
       {flow.step === 5 && flow.quote && flow.beneficiary && flow.paymentMethod && (
-        <Card elevated>
-          <Caption>Review transfer</Caption>
-          <Text style={typography.bodyBold}>To: {flow.beneficiary.full_name}</Text>
-          <Text style={typography.body}>Send: {formatZAR(flow.quote.send_amount_zar)}</Text>
-          <Text style={typography.body}>Fee: {formatZAR(flow.quote.fee_zar)}</Text>
-          <Text style={typography.body}>Rate: {flow.quote.exchange_rate}</Text>
-          <Text style={typography.body}>Gets: {formatForeign(flow.quote.receive_amount_ghs, flow.currency)}</Text>
-          <Text style={typography.body}>Pay via: {flow.paymentMethod.name}</Text>
-          <Caption>Est. delivery: Same day · Processed via licensed partners. TransAfrik is not a bank.</Caption>
-        </Card>
+        <FintechCard variant="elevated">
+          <Text style={[typography.label, { color: theme.textTertiary, marginBottom: spacing.md }]}>Transfer summary</Text>
+          <ListItem title={flow.beneficiary.full_name} subtitle="Recipient" avatarName={flow.beneficiary.full_name} showChevron={false} style={{ paddingHorizontal: 0, backgroundColor: "transparent" }} />
+          <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
+            <Row label="You send" value={formatZAR(flow.quote.send_amount_zar)} />
+            <Row label="Fee" value={formatZAR(flow.quote.fee_zar)} />
+            <Row label="Rate" value={String(flow.quote.exchange_rate)} />
+            <Row label="They receive" value={formatForeign(flow.quote.receive_amount_ghs, flow.currency)} highlight />
+            <Row label="Payment" value={flow.paymentMethod.name} />
+          </View>
+          <Text style={[typography.caption, { color: theme.textTertiary, marginTop: spacing.md }]}>Est. same-day delivery · Processed via licensed partners</Text>
+        </FintechCard>
       )}
 
       <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg }}>
         {flow.step > 1 && <Button title="Back" onPress={() => flow.setStep(flow.step - 1)} variant="outline" style={{ flex: 1 }} />}
-        <Button title={flow.step === 5 ? "Confirm & Pay" : "Continue"} onPress={next} loading={loading} style={{ flex: 2 }} disabled={flow.step === 1 && !flow.corridorCode} />
+        <Button title={flow.step === 5 ? "Confirm & pay" : "Continue"} onPress={next} loading={loading} style={{ flex: 2 }} disabled={flow.step === 1 && !flow.corridorCode} />
       </View>
     </Screen>
+  );
+}
+
+function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  const theme = useAppTheme();
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <Text style={[typography.caption, { color: theme.textSecondary }]}>{label}</Text>
+      <Text style={[highlight ? typography.bodyBold : typography.body, { color: highlight ? theme.primary : theme.text }]}>{value}</Text>
+    </View>
   );
 }

@@ -3,8 +3,10 @@ import { useThemeStore } from "../store/themeStore";
 import { darkTheme, lightTheme, palette } from "./colors";
 import { spacing, radius } from "./spacing";
 import { typography } from "./typography";
+import { tokens } from "./tokens";
+import { shadow } from "./shadows";
 
-export { palette, lightTheme, darkTheme, typography, spacing, radius };
+export { palette, lightTheme, darkTheme, typography, spacing, radius, tokens, shadow };
 
 export type AppTheme = typeof lightTheme;
 

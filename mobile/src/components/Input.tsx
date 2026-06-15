@@ -19,11 +19,11 @@ export function Input({ label, error, hint, style, ...rest }: InputProps) {
         style={[
           {
             borderWidth: 1.5,
-            borderColor: error ? theme.error : theme.border,
-            borderRadius: radius.md,
+            borderColor: error ? theme.error : theme.inputBorder,
+            borderRadius: radius.lg,
             padding: spacing.md,
             color: theme.text,
-            backgroundColor: theme.surface,
+            backgroundColor: theme.inputBg,
             fontSize: 16,
           },
           style,

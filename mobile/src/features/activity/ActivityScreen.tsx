@@ -1,26 +1,49 @@
 import { useMemo, useState } from "react";
-import { FlatList, TextInput, TouchableOpacity, Text, View } from "react-native";
+import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Badge, Caption, EmptyState, Screen, H2 } from "../../components";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  Button,
+  EmptyState,
+  FilterChips,
+  FintechCard,
+  ListItem,
+  SearchBar,
+  SkeletonList,
+  StatusPill,
+} from "../../components";
 import { transfersApi } from "../../api";
 import { offlineCache } from "../../services/offlineCache";
 import { formatDate, formatZAR } from "../../utils/format";
 import { TRANSFER_STATUS_LABELS } from "../../utils/constants";
+import { spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
-import { spacing } from "../../theme/spacing";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { Transfer } from "../../types";
 
-const FILTERS = ["all", "pending_payment", "processing", "completed"] as const;
+const FILTERS = [
+  { value: "all" as const, label: "All" },
+  { value: "pending_payment" as const, label: "Pending" },
+  { value: "processing" as const, label: "Processing" },
+  { value: "completed" as const, label: "Completed" },
+];
+
+function statusVariant(status: string): "success" | "warning" | "error" | "info" | "neutral" {
+  if (status === "completed") return "success";
+  if (status === "failed") return "error";
+  if (status === "pending_payment") return "warning";
+  return "info";
+}
 
 export default function ActivityScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
+  const theme = useAppTheme();
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("all");
   const [search, setSearch] = useState("");
 
-  const { data: transfers = [], refetch } = useQuery({
+  const { data: transfers = [], refetch, isLoading } = useQuery({
     queryKey: ["transfers"],
     queryFn: async () => {
       try {
@@ -42,44 +65,46 @@ export default function ActivityScreen() {
   }, [transfers, filter, search]);
 
   return (
-    <Screen padded={false}>
-      <View style={{ padding: spacing.lg }}>
-        <H2>Activity</H2>
-        <TextInput
-          placeholder="Search by reference..."
-          value={search}
-          onChangeText={setSearch}
-          style={{ borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, padding: 12, marginVertical: spacing.md, backgroundColor: "#fff" }}
-        />
-        <FlatList
-          horizontal
-          data={FILTERS}
-          keyExtractor={(i) => i}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => setFilter(item)} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: filter === item ? "#1B5E3B" : "#F3F4F6", marginRight: 8 }}>
-              <Text style={{ color: filter === item ? "#fff" : "#374151", fontWeight: "600", textTransform: "capitalize" }}>{item.replace("_", " ")}</Text>
-            </TouchableOpacity>
-          )}
-          style={{ marginBottom: spacing.md }}
-        />
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+      <View style={{ padding: spacing.lg, paddingBottom: 0 }}>
+        <Text style={[typography.h1, { color: theme.text, marginBottom: spacing.md }]}>Activity</Text>
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search by reference" />
+        <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
       </View>
-      <FlatList
-        data={filtered}
-        keyExtractor={(t) => String(t.id)}
-        onRefresh={refetch}
-        refreshing={false}
-        ListEmptyComponent={<EmptyState title="No transfers" message="Your transfer history will appear here" actionLabel="Send Money" onAction={() => navigation.navigate("SendFlow")} />}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => navigation.navigate("TransferTracking", { id: item.id })} style={{ padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", backgroundColor: "#fff" }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={typography.bodyBold}>{item.reference}</Text>
-              <Badge label={TRANSFER_STATUS_LABELS[item.status] ?? item.status} variant={item.status === "completed" ? "success" : "neutral"} />
-            </View>
-            <Caption>{formatZAR(item.send_amount_zar)} · {formatDate(item.created_at)}</Caption>
-          </TouchableOpacity>
-        )}
-      />
-    </Screen>
+
+      {isLoading ? (
+        <View style={{ padding: spacing.lg }}><SkeletonList /></View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(t) => String(t.id)}
+          onRefresh={refetch}
+          refreshing={false}
+          contentContainerStyle={{ paddingBottom: spacing.xxxl, flexGrow: 1 }}
+          ListEmptyComponent={
+            <EmptyState
+              icon="transfers"
+              title="No transfers yet"
+              message="When you send money, your transfers and receipts will appear here."
+              actionLabel="Send money"
+              onAction={() => navigation.navigate("SendFlow")}
+            />
+          }
+          renderItem={({ item }) => (
+            <FintechCard variant="default" padding="sm" style={{ marginHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+              <ListItem
+                title={item.reference}
+                subtitle={formatZAR(item.send_amount_zar)}
+                meta={formatDate(item.created_at)}
+                icon="swap-horizontal"
+                onPress={() => navigation.navigate("TransferTracking", { id: item.id })}
+                right={<StatusPill label={TRANSFER_STATUS_LABELS[item.status] ?? item.status} variant={statusVariant(item.status)} />}
+                style={{ backgroundColor: "transparent" }}
+              />
+            </FintechCard>
+          )}
+        />
+      )}
+    </View>
   );
 }

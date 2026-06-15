@@ -46,9 +46,9 @@ export function Button({ title, onPress, variant = "primary", loading, disabled,
       style={[
         {
           ...styles[variant],
-          borderRadius: radius.md,
+          borderRadius: radius.lg,
           paddingVertical: py,
-          paddingHorizontal: spacing.lg,
+          paddingHorizontal: spacing.xl,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
