@@ -61,7 +61,8 @@
         {
           "cameraPermission": "Capture selfie for KYC verification"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "apiUrl": "https://api.ipaygo.co.za",
