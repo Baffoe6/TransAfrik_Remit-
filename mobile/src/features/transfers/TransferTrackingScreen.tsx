@@ -34,7 +34,7 @@ export default function TransferTrackingScreen({ route, navigation }: Props) {
 
   const { data: timeline = [] } = useQuery({
     queryKey: ["timeline", id],
-    queryFn: async () => (await transfersApi.timeline(id)).data,
+    queryFn: () => transfersApi.timeline(id),
     refetchInterval: 15000,
   });
 

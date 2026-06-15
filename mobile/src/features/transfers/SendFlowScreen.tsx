@@ -1,26 +1,28 @@
 import { useEffect, useState } from "react";
-import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import {
   AlertBanner,
-  AmountDisplay,
   Button,
   FintechCard,
-  Input,
   ListItem,
   Screen,
   StepIndicator,
 } from "../../components";
+import { LiveCalculator } from "../../components/worldclass";
 import { beneficiariesApi, paymentsApi, transfersApi } from "../../api";
 import { useSendFlowStore } from "../../store/sendFlowStore";
-import { CORRIDORS } from "../../utils/constants";
+import { useTemplateStore } from "../../store/templateStore";
+import { useLiveQuote } from "../../hooks/useLiveQuote";
+import { CORRIDORS, PAYOUT_PARTNERS } from "../../utils/constants";
 import { formatForeign, formatZAR } from "../../utils/format";
 import { radius, spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { Beneficiary } from "../../types";
+import { hapticSuccess } from "../../services/haptics";
 
 type Props = NativeStackScreenProps<RootStackParamList, "SendFlow">;
 
@@ -59,9 +61,11 @@ function SelectableRow({
 
 export default function SendFlowScreen({ navigation }: Props) {
   const flow = useSendFlowStore();
+  const saveTemplate = useTemplateStore((s) => s.saveTemplate);
   const theme = useAppTheme();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [templateName, setTemplateName] = useState("");
 
   const { data: beneficiaries = [] } = useQuery({
     queryKey: ["beneficiaries"],
@@ -74,22 +78,17 @@ export default function SendFlowScreen({ navigation }: Props) {
     enabled: flow.step >= 4,
   });
 
+  const { data: liveQuote } = useLiveQuote(flow.amount, flow.destinationCountry, flow.step === 2 || flow.step === 5);
+
+  useEffect(() => {
+    if (liveQuote && (flow.step === 2 || flow.step === 5)) flow.setQuote(liveQuote);
+  }, [liveQuote, flow.step]);
+
   useEffect(() => () => useSendFlowStore.getState().reset(), []);
 
   const filteredBeneficiaries = beneficiaries.filter((b) => b.country === flow.destinationCountry || flow.destinationCountry === "GH");
-
-  const fetchQuote = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await transfersApi.calculate(flow.amount, flow.destinationCountry);
-      flow.setQuote(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Quote failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const partner = PAYOUT_PARTNERS.find((p) => (p.corridors as readonly string[]).includes(flow.destinationCountry));
+  const corridor = CORRIDORS.find((c) => c.code === flow.corridorCode);
 
   const confirm = async () => {
     if (!flow.beneficiary || !flow.paymentMethod) return;
@@ -103,6 +102,7 @@ export default function SendFlowScreen({ navigation }: Props) {
       });
       const { data: ref } = await paymentsApi.generate(data.id, flow.paymentMethod.code);
       flow.setTransferId(data.id);
+      hapticSuccess();
       navigation.replace("PaymentSuccess", { transferId: data.id, reference: ref });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Transfer failed");
@@ -112,9 +112,16 @@ export default function SendFlowScreen({ navigation }: Props) {
   };
 
   const next = async () => {
-    if (flow.step === 2 && !flow.quote) {
-      await fetchQuote();
-      if (!useSendFlowStore.getState().quote) return;
+    if (flow.step === 2) {
+      const numeric = parseFloat(flow.amount);
+      if (Number.isNaN(numeric) || numeric < 50) {
+        setError("Minimum send amount is R50");
+        return;
+      }
+      if (!flow.quote && !liveQuote) {
+        setError("Waiting for live quote…");
+        return;
+      }
     }
     if (flow.step === 3 && !flow.beneficiary) {
       setError("Select a recipient");
@@ -127,6 +134,21 @@ export default function SendFlowScreen({ navigation }: Props) {
     setError("");
     if (flow.step < 5) flow.setStep(flow.step + 1);
     else confirm();
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!flow.beneficiary || !templateName.trim()) return;
+    await saveTemplate({
+      name: templateName.trim(),
+      beneficiaryId: flow.beneficiary.id,
+      beneficiaryName: flow.beneficiary.full_name,
+      amount: flow.amount,
+      corridorCode: flow.corridorCode,
+      destinationCountry: flow.destinationCountry,
+      currency: flow.currency,
+    });
+    setTemplateName("");
+    hapticSuccess();
   };
 
   return (
@@ -152,19 +174,13 @@ export default function SendFlowScreen({ navigation }: Props) {
       )}
 
       {flow.step === 2 && (
-        <>
-          <FintechCard variant="elevated">
-            <Input label="You send (ZAR)" value={flow.amount} onChangeText={flow.setAmount} keyboardType="decimal-pad" />
-            <Button title="Get live quote" onPress={fetchQuote} variant="outline" loading={loading} />
-          </FintechCard>
-          {flow.quote && (
-            <FintechCard variant="hero" padding="lg">
-              <AmountDisplay label="You send" amount={formatZAR(flow.quote.send_amount_zar)} light />
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.2)", marginVertical: spacing.md }} />
-              <AmountDisplay label="They receive" amount={formatForeign(flow.quote.receive_amount_ghs, flow.currency)} sublabel={`Fee ${formatZAR(flow.quote.fee_zar)} · Rate ${flow.quote.exchange_rate}`} size="sm" light />
-            </FintechCard>
-          )}
-        </>
+        <LiveCalculator
+          amount={flow.amount}
+          onAmountChange={flow.setAmount}
+          destinationCountry={flow.destinationCountry}
+          currency={flow.currency}
+          corridorCode={flow.corridorCode}
+        />
       )}
 
       {flow.step === 3 && (
@@ -210,11 +226,28 @@ export default function SendFlowScreen({ navigation }: Props) {
           <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
             <Row label="You send" value={formatZAR(flow.quote.send_amount_zar)} />
             <Row label="Fee" value={formatZAR(flow.quote.fee_zar)} />
-            <Row label="Rate" value={String(flow.quote.exchange_rate)} />
+            <Row label="Rate" value={`1 ZAR = ${flow.quote.exchange_rate} ${flow.currency}`} />
             <Row label="They receive" value={formatForeign(flow.quote.receive_amount_ghs, flow.currency)} highlight />
             <Row label="Payment" value={flow.paymentMethod.name} />
+            <Row label="Delivery" value={corridor?.eta ?? "Same day"} />
           </View>
-          <Text style={[typography.caption, { color: theme.textTertiary, marginTop: spacing.md }]}>Est. same-day delivery · Processed via licensed partners</Text>
+          {partner && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.md, padding: spacing.sm, backgroundColor: theme.primaryMuted, borderRadius: radius.md }}>
+              <Ionicons name="shield-checkmark" size={16} color={theme.primary} />
+              <Text style={[typography.caption, { color: theme.text }]}>Payout via {partner.name}</Text>
+            </View>
+          )}
+          <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+            <Text style={[typography.caption, { color: theme.textSecondary }]}>Save as template</Text>
+            <TextInput
+              value={templateName}
+              onChangeText={setTemplateName}
+              placeholder="e.g. Monthly rent — Ghana"
+              placeholderTextColor={theme.textTertiary}
+              style={{ borderWidth: 1, borderColor: theme.border, borderRadius: radius.md, padding: spacing.md, color: theme.text }}
+            />
+            <Button title="Save template" onPress={handleSaveTemplate} variant="outline" disabled={!templateName.trim()} />
+          </View>
         </FintechCard>
       )}
 

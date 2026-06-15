@@ -51,4 +51,18 @@ export const authApi = {
 
   verifyPhone: (code: string) =>
     apiClient.post("/auth/otp/verify-phone", { code }),
+
+  devices: () => apiClient.get<TrustedDevice[]>("/auth/devices"),
+  trustDevice: (device_id: number, trusted: boolean) =>
+    apiClient.post("/auth/devices/trust", { device_id, trusted }),
 };
+
+export interface TrustedDevice {
+  id: number;
+  device_name: string;
+  device_fingerprint?: string;
+  trusted: boolean;
+  last_seen_at: string;
+  ip_address?: string;
+  is_current?: boolean;
+}

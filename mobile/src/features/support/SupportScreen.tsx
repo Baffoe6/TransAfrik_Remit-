@@ -1,16 +1,26 @@
 import { useState } from "react";
-import { FlatList, Linking } from "react-native";
+import { Linking, Text, TouchableOpacity, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertBanner, Body, Button, Caption, Card, H2, Input, Screen } from "../../components";
+import { Ionicons } from "@expo/vector-icons";
+import { AlertBanner, Button, FintechCard, Input, Screen, StatusPill } from "../../components";
 import { supportApi } from "../../api";
 import { FAQ_ITEMS } from "../../utils/constants";
+import { spacing, useAppTheme, radius } from "../../theme";
+import { typography } from "../../theme/typography";
+import { formatDate } from "../../utils/format";
+import { hapticLight } from "../../services/haptics";
+
+const WHATSAPP_URL = "https://wa.me/27123456789?text=Hi%20TransAfrik%2C%20I%20need%20help%20with%20my%20transfer";
 
 export default function SupportScreen() {
   const qc = useQueryClient();
+  const theme = useAppTheme();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [tab, setTab] = useState<"help" | "tickets" | "chat">("help");
 
   const { data: tickets = [], refetch } = useQuery({
     queryKey: ["support-tickets"],
@@ -26,6 +36,7 @@ export default function SupportScreen() {
       setMessage("");
       await refetch();
       await qc.invalidateQueries({ queryKey: ["support-tickets"] });
+      setTab("tickets");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create ticket");
     } finally {
@@ -33,36 +44,105 @@ export default function SupportScreen() {
     }
   };
 
+  const openWhatsApp = () => {
+    hapticLight();
+    Linking.openURL(WHATSAPP_URL);
+  };
+
   return (
     <Screen scroll>
-      <H2>Support</H2>
-      <Button title="WhatsApp Support" onPress={() => Linking.openURL("https://wa.me/27123456789")} variant="primary" />
+      <Text style={[typography.h1, { color: theme.text }]}>Help & support</Text>
+      <Text style={[typography.body, { color: theme.textSecondary, marginBottom: spacing.lg }]}>
+        WhatsApp, tickets, FAQ and live chat
+      </Text>
 
-      <Card>
-        <H2>FAQ</H2>
-        {FAQ_ITEMS.map((f) => (
-          <Card key={f.q} style={{ marginBottom: 8 }}>
-            <Body>{f.q}</Body>
-            <Caption>{f.a}</Caption>
-          </Card>
+      <View style={{ flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg }}>
+        {(["help", "tickets", "chat"] as const).map((t) => (
+          <TouchableOpacity
+            key={t}
+            onPress={() => setTab(t)}
+            style={{
+              flex: 1,
+              paddingVertical: spacing.sm,
+              borderRadius: radius.full,
+              backgroundColor: tab === t ? theme.primary : theme.surfaceMuted,
+              alignItems: "center",
+            }}
+          >
+            <Text style={[typography.caption, { color: tab === t ? "#fff" : theme.text, fontWeight: "700", textTransform: "capitalize" }]}>{t}</Text>
+          </TouchableOpacity>
         ))}
-      </Card>
+      </View>
 
-      <Card>
-        <H2>Create Ticket</H2>
-        {error ? <AlertBanner type="error" message={error} /> : null}
-        <Input label="Subject" value={subject} onChangeText={setSubject} />
-        <Input label="Message" value={message} onChangeText={setMessage} multiline />
-        <Button title="Submit Ticket" onPress={submit} loading={loading} />
-      </Card>
+      {tab === "help" && (
+        <>
+          <FintechCard variant="hero" padding="lg">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+              <Ionicons name="logo-whatsapp" size={32} color="#25D366" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>WhatsApp support</Text>
+                <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>Fastest response · Mon–Sat 8am–8pm</Text>
+              </View>
+            </View>
+            <Button title="Chat on WhatsApp" onPress={openWhatsApp} variant="gold" style={{ marginTop: spacing.md }} />
+          </FintechCard>
 
-      <H2>Your Tickets</H2>
-      {tickets.map((t) => (
-        <Card key={t.id}>
-          <Body>{t.subject}</Body>
-          <Caption>{t.status} · {new Date(t.created_at).toLocaleDateString()}</Caption>
-        </Card>
-      ))}
+          <Text style={[typography.h3, { color: theme.text, marginBottom: spacing.md }]}>FAQ</Text>
+          {FAQ_ITEMS.map((f) => (
+            <TouchableOpacity key={f.q} onPress={() => setExpandedFaq(expandedFaq === f.q ? null : f.q)} activeOpacity={0.85}>
+              <FintechCard variant="muted" padding="md" style={{ marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={[typography.bodyBold, { color: theme.text, flex: 1 }]}>{f.q}</Text>
+                  <Ionicons name={expandedFaq === f.q ? "chevron-up" : "chevron-down"} size={18} color={theme.textTertiary} />
+                </View>
+                {expandedFaq === f.q && (
+                  <Text style={[typography.bodySm, { color: theme.textSecondary, marginTop: spacing.sm }]}>{f.a}</Text>
+                )}
+              </FintechCard>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
+      {tab === "tickets" && (
+        <>
+          <FintechCard variant="elevated">
+            <Text style={[typography.h3, { color: theme.text, marginBottom: spacing.md }]}>Create ticket</Text>
+            {error ? <AlertBanner type="error" message={error} /> : null}
+            <Input label="Subject" value={subject} onChangeText={setSubject} />
+            <Input label="Message" value={message} onChangeText={setMessage} multiline />
+            <Button title="Submit ticket" onPress={submit} loading={loading} />
+          </FintechCard>
+
+          <Text style={[typography.h3, { color: theme.text, marginTop: spacing.lg, marginBottom: spacing.md }]}>Your tickets</Text>
+          {tickets.length === 0 ? (
+            <Text style={[typography.body, { color: theme.textSecondary }]}>No tickets yet</Text>
+          ) : (
+            tickets.map((t) => (
+              <FintechCard key={t.id} variant="default" padding="md" style={{ marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={[typography.bodyBold, { color: theme.text }]}>{t.subject}</Text>
+                  <StatusPill label={t.status} variant="info" size="sm" />
+                </View>
+                <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 4 }]}>{formatDate(t.created_at)}</Text>
+              </FintechCard>
+            ))
+          )}
+        </>
+      )}
+
+      {tab === "chat" && (
+        <FintechCard variant="muted">
+          <View style={{ alignItems: "center", padding: spacing.xl }}>
+            <Ionicons name="chatbubbles-outline" size={48} color={theme.primary} />
+            <Text style={[typography.h3, { color: theme.text, marginTop: spacing.md }]}>Live chat</Text>
+            <Text style={[typography.body, { color: theme.textSecondary, textAlign: "center", marginTop: spacing.sm }]}>
+              In-app live chat is coming soon. Use WhatsApp for immediate assistance.
+            </Text>
+            <Button title="Open WhatsApp" onPress={openWhatsApp} variant="primary" style={{ marginTop: spacing.lg }} />
+          </View>
+        </FintechCard>
+      )}
     </Screen>
   );
 }

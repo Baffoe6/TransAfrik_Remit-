@@ -5,7 +5,6 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  Button,
   EmptyState,
   FilterChips,
   FintechCard,
@@ -13,34 +12,59 @@ import {
   SearchBar,
   SkeletonList,
   StatusPill,
+  Timeline,
 } from "../../components";
 import { transfersApi } from "../../api";
 import { offlineCache } from "../../services/offlineCache";
 import { formatDate, formatZAR } from "../../utils/format";
-import { TRANSFER_STATUS_LABELS } from "../../utils/constants";
+import { ACTIVITY_STATUS_FILTERS, ACTIVITY_TIME_FILTERS, TRANSFER_STATUS_LABELS } from "../../utils/constants";
 import { spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { Transfer } from "../../types";
 
-const FILTERS = [
-  { value: "all" as const, label: "All" },
-  { value: "pending_payment" as const, label: "Pending" },
-  { value: "processing" as const, label: "Processing" },
-  { value: "completed" as const, label: "Completed" },
-];
+const PROCESSING_STATUSES = new Set(["payment_received", "compliance_review", "submitted_to_partner", "processing"]);
 
 function statusVariant(status: string): "success" | "warning" | "error" | "info" | "neutral" {
   if (status === "completed") return "success";
-  if (status === "failed") return "error";
+  if (status === "failed" || status === "rejected") return "error";
+  if (status === "refunded") return "neutral";
   if (status === "pending_payment") return "warning";
   return "info";
 }
 
+function matchesStatusFilter(status: string, filter: string) {
+  if (filter === "all") return true;
+  if (filter === "processing") return PROCESSING_STATUSES.has(status);
+  return status === filter;
+}
+
+function matchesTimeFilter(createdAt: string, filter: string) {
+  if (filter === "all") return true;
+  const d = new Date(createdAt);
+  const now = new Date();
+  if (filter === "today") return d.toDateString() === now.toDateString();
+  if (filter === "week") return now.getTime() - d.getTime() < 7 * 86400000;
+  if (filter === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  return true;
+}
+
+const PROGRESS: Record<string, number> = {
+  pending_payment: 15,
+  payment_received: 35,
+  compliance_review: 50,
+  submitted_to_partner: 65,
+  processing: 80,
+  completed: 100,
+  failed: 0,
+  refunded: 0,
+};
+
 export default function ActivityScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const theme = useAppTheme();
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
   const { data: transfers = [], refetch, isLoading } = useQuery({
@@ -58,18 +82,28 @@ export default function ActivityScreen() {
 
   const filtered = useMemo(() => {
     return transfers.filter((t) => {
-      const matchFilter = filter === "all" || t.status === filter;
+      const matchStatus = matchesStatusFilter(t.status, statusFilter);
+      const matchTime = matchesTimeFilter(t.created_at, timeFilter);
       const matchSearch = !search || t.reference.toLowerCase().includes(search.toLowerCase());
-      return matchFilter && matchSearch;
+      return matchStatus && matchTime && matchSearch;
     });
-  }, [transfers, filter, search]);
+  }, [transfers, statusFilter, timeFilter, search]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <View style={{ padding: spacing.lg, paddingBottom: 0 }}>
         <Text style={[typography.h1, { color: theme.text, marginBottom: spacing.md }]}>Activity</Text>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search by reference" />
-        <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
+        <FilterChips
+          options={ACTIVITY_TIME_FILTERS.map((f) => ({ value: f.value, label: f.label }))}
+          selected={timeFilter}
+          onSelect={setTimeFilter}
+        />
+        <FilterChips
+          options={ACTIVITY_STATUS_FILTERS.map((f) => ({ value: f.value, label: f.label }))}
+          selected={statusFilter}
+          onSelect={setStatusFilter}
+        />
       </View>
 
       {isLoading ? (
@@ -90,19 +124,41 @@ export default function ActivityScreen() {
               onAction={() => navigation.navigate("SendFlow")}
             />
           }
-          renderItem={({ item }) => (
-            <FintechCard variant="default" padding="sm" style={{ marginHorizontal: spacing.lg, marginBottom: spacing.sm }}>
-              <ListItem
-                title={item.reference}
-                subtitle={formatZAR(item.send_amount_zar)}
-                meta={formatDate(item.created_at)}
-                icon="swap-horizontal"
-                onPress={() => navigation.navigate("TransferTracking", { id: item.id })}
-                right={<StatusPill label={TRANSFER_STATUS_LABELS[item.status] ?? item.status} variant={statusVariant(item.status)} />}
-                style={{ backgroundColor: "transparent" }}
-              />
-            </FintechCard>
-          )}
+          renderItem={({ item }) => {
+            const progress = PROGRESS[item.status] ?? 20;
+            return (
+              <FintechCard variant="default" padding="md" style={{ marginHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+                <ListItem
+                  title={item.reference}
+                  subtitle={formatZAR(item.send_amount_zar)}
+                  meta={formatDate(item.created_at)}
+                  icon="swap-horizontal"
+                  onPress={() => navigation.navigate("TransferTracking", { id: item.id })}
+                  right={<StatusPill label={TRANSFER_STATUS_LABELS[item.status] ?? item.status} variant={statusVariant(item.status)} />}
+                  style={{ backgroundColor: "transparent", paddingHorizontal: 0 }}
+                />
+                <View style={{ height: 4, backgroundColor: theme.border, borderRadius: 2, marginTop: spacing.sm, overflow: "hidden" }}>
+                  <View style={{ width: `${progress}%`, height: 4, backgroundColor: item.status === "failed" ? theme.error : theme.primary }} />
+                </View>
+                <Timeline
+                  steps={[
+                    { title: "Created", completed: true },
+                    { title: TRANSFER_STATUS_LABELS[item.status] ?? item.status, active: !["completed", "failed", "refunded"].includes(item.status) },
+                    { title: "Delivered", completed: item.status === "completed" },
+                  ]}
+                />
+                <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm }}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("Receipt", { id: item.id })}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                  >
+                    <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                    <Text style={[typography.caption, { color: theme.primary, fontWeight: "600" }]}>Export receipt</Text>
+                  </TouchableOpacity>
+                </View>
+              </FintechCard>
+            );
+          }}
         />
       )}
     </View>

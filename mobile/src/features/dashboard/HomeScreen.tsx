@@ -1,11 +1,10 @@
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  AmountDisplay,
   Button,
   FintechCard,
   HeroHeader,
@@ -15,24 +14,47 @@ import {
   SkeletonCard,
   StatusPill,
   TrustBadge,
-  ListItem,
-  ListDivider,
 } from "../../components";
+import {
+  ActiveTransferWidget,
+  CorridorSelector,
+  FavoriteRecipientsCarousel,
+  LiveCalculator,
+  RateAlertWidget,
+} from "../../components/worldclass";
 import { dashboardApi, beneficiariesApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
+import { useCalculatorStore } from "../../store/calculatorStore";
+import { useRateAlertStore } from "../../store/rateAlertStore";
+import { useSettingsStore } from "../../store/settingsStore";
+import { useSendFlowStore } from "../../store/sendFlowStore";
 import { offlineCache } from "../../services/offlineCache";
-import { formatZAR, greetingName } from "../../utils/format";
-import { spacing } from "../../theme";
-import { useAppTheme } from "../../theme";
-import type { DashboardSummary } from "../../types";
+import { greetingName } from "../../utils/format";
+import { spacing, useAppTheme } from "../../theme";
+import { typography } from "../../theme/typography";
+import type { DashboardSummary, Transfer } from "../../types";
 import { RootStackParamList } from "../../navigation/MainNavigator";
-import { TRANSFER_STATUS_LABELS } from "../../utils/constants";
+import { CORRIDORS } from "../../utils/constants";
+import { hapticLight } from "../../services/haptics";
+
+const ACTIVE_STATUSES = new Set(["pending_payment", "payment_received", "compliance_review", "submitted_to_partner", "processing"]);
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const theme = useAppTheme();
   const user = useAuthStore((s) => s.user);
   const [offline, setOffline] = useState(false);
+
+  const calc = useCalculatorStore();
+  const favoriteIds = useSettingsStore((s) => s.favoriteIds);
+  const loadSettings = useSettingsStore((s) => s.load);
+  const loadAlerts = useRateAlertStore((s) => s.load);
+  const sendFlow = useSendFlowStore();
+
+  useEffect(() => {
+    loadSettings();
+    loadAlerts();
+  }, [loadSettings, loadAlerts]);
 
   const { data: summary, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard"],
@@ -64,9 +86,23 @@ export default function HomeScreen() {
 
   const kycStatus = summary?.kyc.status ?? "Draft";
   const kycVariant = kycStatus === "Approved" ? "success" : kycStatus === "Rejected" ? "error" : "warning";
+  const corridor = CORRIDORS.find((c) => c.code === calc.corridorCode);
+
+  const activeTransfer = useMemo(
+    () => (summary?.transfers.recent ?? []).find((t: Transfer) => ACTIVE_STATUSES.has(t.status)) ?? null,
+    [summary?.transfers.recent],
+  );
+
+  const startSend = () => {
+    hapticLight();
+    sendFlow.reset();
+    sendFlow.setDestination(calc.destinationCountry, calc.corridorCode, calc.currency);
+    sendFlow.setAmount(calc.sendAmount);
+    navigation.navigate("SendFlow");
+  };
 
   const quickActions = [
-    { id: "send", label: "Send", icon: "arrow-up-circle" as const, onPress: () => navigation.navigate("SendFlow"), accent: true },
+    { id: "send", label: "Send", icon: "arrow-up-circle" as const, onPress: startSend, accent: true },
     { id: "beneficiaries", label: "Recipients", icon: "people" as const, onPress: () => navigation.navigate("Tabs", { screen: "Beneficiaries" } as never) },
     { id: "kyc", label: "Verify", icon: "shield-checkmark" as const, onPress: () => navigation.navigate("Kyc") },
     { id: "activity", label: "Activity", icon: "time" as const, onPress: () => navigation.navigate("Tabs", { screen: "Activity" } as never) },
@@ -84,7 +120,7 @@ export default function HomeScreen() {
         <HeroHeader
           greeting={greetingName(user?.first_name)}
           title="TransAfrik"
-          subtitle="Send money to Ghana — fast & secure"
+          subtitle={`Send to ${corridor?.name ?? "Africa"} — live rates & tracking`}
           rightAction={{ icon: "notifications-outline", onPress: () => navigation.navigate("Notifications") }}
         >
           <TrustBadge items={["Licensed partners", "Encrypted", "FICA compliant"]} />
@@ -102,15 +138,53 @@ export default function HomeScreen() {
             </>
           ) : (
             <>
+              <SectionHeader title="Corridor" />
+              <CorridorSelector
+                selected={calc.corridorCode}
+                onSelect={(code, country, currency) => calc.setCorridor(code, country, currency)}
+                compact
+              />
+
+              <LiveCalculator
+                amount={calc.sendAmount}
+                onAmountChange={calc.setSendAmount}
+                destinationCountry={calc.destinationCountry}
+                currency={calc.currency}
+                corridorCode={calc.corridorCode}
+                compact
+              />
+              <Button title="Send now" onPress={startSend} variant="gold" style={{ marginBottom: spacing.md }} />
+
+              <ActiveTransferWidget
+                transfer={activeTransfer}
+                onPress={() => activeTransfer && navigation.navigate("TransferTracking", { id: activeTransfer.id })}
+              />
+
+              <FavoriteRecipientsCarousel
+                beneficiaries={beneficiaries}
+                favoriteIds={favoriteIds}
+                onSelect={(b) => {
+                  sendFlow.reset();
+                  sendFlow.setDestination(calc.destinationCountry, calc.corridorCode, calc.currency);
+                  sendFlow.setAmount(calc.sendAmount);
+                  sendFlow.setBeneficiary(b);
+                  sendFlow.setStep(2);
+                  navigation.navigate("SendFlow");
+                }}
+                onAdd={() => navigation.navigate("BeneficiaryForm", {})}
+              />
+
+              <RateAlertWidget />
+
               <FintechCard variant={kycStatus === "Approved" ? "muted" : "accent"}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                     <Ionicons name="shield-checkmark" size={22} color={theme.primary} />
-                    <Text style={{ fontWeight: "600", fontSize: 16, color: theme.text }}>Identity verification</Text>
+                    <Text style={[typography.bodyBold, { color: theme.text }]}>Identity verification</Text>
                   </View>
                   <StatusPill label={kycStatus} variant={kycVariant as "success"} />
                 </View>
-                <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 8 }}>
+                <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 8 }]}>
                   {summary?.profile_completion.percent ?? 0}% complete · {summary?.kyc.documents_uploaded ?? 0} documents
                 </Text>
                 {kycStatus !== "Approved" && (
@@ -118,69 +192,22 @@ export default function HomeScreen() {
                 )}
               </FintechCard>
 
-              <FintechCard variant="elevated">
-                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase" }}>ZA → Ghana</Text>
-                <AmountDisplay label="Live corridor rate" amount="1 ZAR ≈ live" sublabel="Fees from R15 · Arrives in minutes" size="sm" />
-              </FintechCard>
-
-              <SectionHeader title="Recent transfers" action="See all" onAction={() => navigation.navigate("Tabs", { screen: "Activity" } as never)} />
-              <FintechCard variant="default" padding="sm">
-                {(summary?.transfers.recent ?? []).slice(0, 3).map((t, i) => (
-                  <View key={t.id}>
-                    {i > 0 && <ListDivider />}
-                    <ListItem
-                      title={t.reference}
-                      subtitle={formatZAR(t.send_amount_zar)}
-                      meta={TRANSFER_STATUS_LABELS[t.status] ?? t.status}
-                      icon="swap-horizontal"
-                      showChevron
-                      onPress={() => navigation.navigate("TransferTracking", { id: t.id })}
-                      right={<StatusPill label={TRANSFER_STATUS_LABELS[t.status] ?? t.status} variant={t.status === "completed" ? "success" : "info"} />}
-                      style={{ backgroundColor: "transparent", paddingHorizontal: spacing.sm }}
-                    />
+              <TouchableOpacity onPress={() => navigation.navigate("Referral")} activeOpacity={0.85}>
+                <FintechCard variant="muted">
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: theme.accentMuted, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="gift" size={24} color={theme.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.bodyBold, { color: theme.text }]}>Refer & earn R50</Text>
+                      <Text style={[typography.caption, { color: theme.textSecondary }]}>
+                        {summary?.referral_program.referrals_made ?? 0} friends invited · Limited promo
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={theme.textTertiary} />
                   </View>
-                ))}
-                {!summary?.transfers.recent?.length && (
-                  <View style={{ padding: spacing.lg, alignItems: "center" }}>
-                    <Text style={{ color: theme.textSecondary, marginBottom: spacing.md }}>No transfers yet</Text>
-                    <Button title="Send your first transfer" onPress={() => navigation.navigate("SendFlow")} variant="gold" />
-                  </View>
-                )}
-              </FintechCard>
-
-              <SectionHeader title="Saved recipients" action="View all" onAction={() => navigation.navigate("Tabs", { screen: "Beneficiaries" } as never)} />
-              <FintechCard variant="default" padding="sm">
-                {beneficiaries.slice(0, 3).map((b, i) => (
-                  <View key={b.id}>
-                    {i > 0 && <ListDivider />}
-                    <ListItem
-                      title={b.full_name}
-                      subtitle={b.country}
-                      avatarName={b.full_name}
-                      onPress={() => navigation.navigate("BeneficiaryForm", { id: b.id })}
-                      style={{ backgroundColor: "transparent", paddingHorizontal: spacing.sm }}
-                    />
-                  </View>
-                ))}
-                {!beneficiaries.length && (
-                  <View style={{ padding: spacing.lg }}>
-                    <Button title="Add recipient" onPress={() => navigation.navigate("BeneficiaryForm", {})} variant="outline" />
-                  </View>
-                )}
-              </FintechCard>
-
-              <FintechCard variant="muted">
-                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
-                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: theme.accentMuted, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="gift" size={24} color={theme.accent} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "700", fontSize: 16, color: theme.text }}>Refer & earn</Text>
-                    <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{summary?.referral_program.referrals_made ?? 0} friends invited</Text>
-                  </View>
-                  <Button title="Invite" onPress={() => navigation.navigate("Referral")} variant="ghost" size="md" />
-                </View>
-              </FintechCard>
+                </FintechCard>
+              </TouchableOpacity>
             </>
           )}
         </View>

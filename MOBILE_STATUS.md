@@ -1,6 +1,6 @@
-# TransAfrik Remit — Mobile Status (Phase 11)
+# TransAfrik Remit — Mobile Status (Phase 16)
 
-**Release:** TransAfrik Remit Mobile v1.0 Preview  
+**Release:** TransAfrik Remit Mobile v1.0 Phase 16  
 **Date:** June 2026  
 **API:** [api.ipaygo.co.za](https://api.ipaygo.co.za)
 
@@ -8,60 +8,66 @@
 
 ## Executive Summary
 
-Premium **fintech-grade** React Native app (Expo SDK 52 + TypeScript) for African migrant customers. Full design system, 5-step send flow, payment vouchers, KYC tracker, activity/receipts, support, and production API integration.
+**World-class fintech remittance** React Native app (Expo SDK 52 + TypeScript) comparable to Wise, Revolut, and Remitly. Live exchange-rate calculator, six African corridors, transfer templates, QR receipts, security center, notification inbox, and premium design system v2.
+
+See [PHASE16_WORLD_CLASS_UPGRADE.md](PHASE16_WORLD_CLASS_UPGRADE.md) for full feature breakdown.
 
 ---
 
-## Architecture (v1.0 Preview)
+## Architecture (Phase 16)
 
 ```
 mobile/src/
-├── theme/          Design tokens (green, gold, charcoal)
-├── components/     Premium UI kit
-├── features/       auth, dashboard, transfers, beneficiaries, kyc, activity, profile, support, referrals, notifications
-├── navigation/     5-tab + stack navigators
-├── api/            auth, transfers, payments, support, kyc, dashboard
-├── store/          auth, onboarding, settings, send flow
-├── services/       secure storage, biometrics, offline cache
-└── utils/          currency, phone, validation, constants
+├── theme/              Design tokens (green, gold, charcoal)
+├── components/
+│   ├── fintech/        Design system v2 components
+│   └── worldclass/     Phase 16 calculators, widgets, glass cards
+├── features/           auth, dashboard, transfers, beneficiaries, kyc, activity, profile, support, notifications
+├── navigation/         5-tab + stack navigators (React Navigation)
+├── api/                auth, transfers, payments, support, kyc, dashboard, notifications
+├── store/              auth, calculator, templates, rate alerts, notification inbox, send flow
+├── hooks/              useLiveQuote, useDebounce
+├── services/           haptics, secure storage, biometrics, offline cache
+└── utils/              currency, phone, validation, constants (6 corridors)
 ```
 
 ---
 
-## Feature Matrix
+## Feature Matrix (Phase 16)
 
-### Authentication
-- [x] Mobile + 4-digit PIN login (primary)
-- [x] Email + password login (secondary)
-- [x] OTP login (SMS / WhatsApp)
-- [x] Password/PIN reset via OTP
-- [x] Onboarding flow (3 slides)
-- [x] Biometric enable screen
-- [ ] Biometric auto-unlock on launch (placeholder)
+### Home
+- [x] Live exchange rate card (replaces balance)
+- [x] Real-time send calculator
+- [x] Active transfer widget + progress
+- [x] Favorite recipients carousel
+- [x] Rate alert widget
+- [x] Referral / promo card
+- [x] 6-corridor selector (ZA→GH, ZW, ZM, KE, NG, UG)
 
-### Customer
-- [x] Premium home dashboard with trust indicators
-- [x] 5-step send flow with payment voucher generation
-- [x] Transfer tracking with live polling (15s)
-- [x] Professional receipt screen
-- [x] Activity tab with filter/search
-- [x] Beneficiaries with favorites + search
-- [x] KYC progress tracker (0–100%) + camera/gallery upload
-- [x] Referrals with WhatsApp/SMS share
-- [x] Support FAQ + tickets + WhatsApp button
-- [x] Notifications center (push placeholder)
-- [x] Profile + security settings
-- [x] Offline cache (dashboard, beneficiaries, transfers)
+### Send
+- [x] Wise-style live calculator with debounced quotes
+- [x] Payout partner badges
+- [x] Transfer summary + save as template
+- [x] Recent templates on Send tab
 
-### Notifications
-- [x] Push notification service stub
-- [ ] Server-side push token registration
-- [ ] SMS / WhatsApp notification delivery (backend future)
+### Beneficiaries
+- [x] Category filters (mobile money, bank, cash pickup)
+- [x] Network logos, favorites, quick send
+- [x] Verification status pills
 
-### Future-Ready
-- [x] Partner registry: Flutterwave, Mukuru, Onafriq, Veengu
-- [x] Biometric service (`expo-local-authentication`)
-- [x] Device fingerprinting for trust scoring
+### Activity & Receipts
+- [x] Timeline view + progress bars
+- [x] Time filters (today/week/month) + status filters incl. refunded
+- [x] QR receipt, WhatsApp/email share, export
+
+### KYC & Profile
+- [x] OCR scan placeholder, selfie, workflow states, document preview
+- [x] Tier badge, transfer limits, compliance status
+- [x] Security center (devices, sessions, MFA, biometrics, PIN)
+
+### Support & Notifications
+- [x] WhatsApp, FAQ, tickets, live chat placeholder
+- [x] Notification inbox with typed alerts
 
 ---
 
@@ -69,56 +75,29 @@ mobile/src/
 
 | Check | Result | Notes |
 |-------|--------|-------|
-| `npm test` | **Pass** | 3/3 tests |
+| `npm test` | **Pass** | Unit + store + navigation tests |
 | `npm run lint` | **Pass** | TypeScript strict |
-| API health `GET /health` | **200** | DB + Redis healthy |
-| Auth login `POST /auth/login` | **401** | Invalid credentials rejected (endpoint live) |
-| API base URL in client | **OK** | Defaults to `https://api.ipaygo.co.za` |
-| `npx expo start` | **Pass** | After `expo-asset` dependency added |
+| `npx expo export --platform android` | **Pass** | JS bundle |
+| API health | **200** | Production API |
 
 ---
 
-## Architecture
+## Dependencies Added (Phase 16)
 
-See [mobile/docs/ARCHITECTURE.md](mobile/docs/ARCHITECTURE.md) for the full diagram.
-
-```
-App.tsx
-  ├── AuthNavigator (unauthenticated)
-  │     Login, Register, OTP Login, Forgot Password
-  └── MainNavigator (authenticated)
-        ├── Tabs: Dashboard, Transfers, Beneficiaries, Profile
-        └── Stack: KYC, Wallet, Referral, Transfer Detail, Beneficiary Form
-```
-
-**Data flow:** Screens → React Query / Zustand → Axios `apiClient` → `https://api.ipaygo.co.za/api/v1`
-
----
-
-## Build & Deploy Readiness
-
-| Item | Status |
-|------|--------|
-| EAS config (`eas.json`) | Ready |
-| Android package `co.za.ipaygo.transafrik` | Configured |
-| iOS bundle `co.za.ipaygo.transafrik` | Configured |
-| Production env `EXPO_PUBLIC_API_URL` | Set in EAS production profile |
-| EAS production build executed | **Pending** — run `eas build` |
-| App Store / Play Store submission | **Pending** — credentials required |
-| Push notification credentials | **Pending** — configure in Expo dashboard |
-
-See [mobile/docs/EAS_BUILD.md](mobile/docs/EAS_BUILD.md) for step-by-step build instructions.
+- `expo-haptics` — tactile feedback
+- `react-native-reanimated` — animation plugin
+- `react-native-qrcode-svg` + `react-native-svg` — receipt QR codes
 
 ---
 
 ## Remaining Before Store Launch
 
-1. Run EAS production builds (`eas build --platform all --profile production`)
-2. Configure Apple Developer + Google Play service accounts
-3. Wire biometric login to auth screens
-4. Register push tokens with backend
-5. Configure live SMS provider on Railway for OTP delivery
-6. End-to-end QA on physical devices (Android + iOS)
+1. EAS production builds
+2. Backend multi-corridor pricing parity
+3. True PDF receipt generation
+4. OCR backend pipeline
+5. Push token registration with backend
+6. Physical device QA
 
 ---
 

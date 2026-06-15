@@ -1,30 +1,37 @@
 import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { AlertBanner, Button, FintechCard, ProgressBar, Screen, StatusPill } from "../../components";
 import { kycApi, profileApi } from "../../api";
-import { spacing, useAppTheme } from "../../theme";
+import { KYC_WORKFLOW_STATES } from "../../utils/constants";
+import { spacing, useAppTheme, radius } from "../../theme";
 import { typography } from "../../theme/typography";
-import { radius } from "../../theme/spacing";
-import { RootStackParamList } from "../../navigation/MainNavigator";
-
-type Props = NativeStackScreenProps<RootStackParamList, "Kyc">;
 
 const DOCS = [
-  { type: "id_document", label: "SA ID or Passport", icon: "card-outline" as const, hint: "Clear photo of your ID document" },
-  { type: "proof_of_address", label: "Proof of Address", icon: "home-outline" as const, hint: "Utility bill or bank statement (3 months)" },
-  { type: "selfie", label: "Selfie Verification", icon: "person-circle-outline" as const, hint: "Hold your ID next to your face" },
+  { type: "id_document", label: "SA ID or Passport", icon: "card-outline" as const, hint: "Clear photo of your ID document", ocr: true },
+  { type: "proof_of_address", label: "Proof of Address", icon: "home-outline" as const, hint: "Utility bill or bank statement (3 months)", ocr: false },
+  { type: "selfie", label: "Selfie Verification", icon: "person-circle-outline" as const, hint: "Hold your ID next to your face", ocr: false },
 ];
 
-export default function KycScreen({ navigation }: Props) {
+function workflowVariant(status: string) {
+  const state = KYC_WORKFLOW_STATES.find((s) => s.value === status.toLowerCase());
+  return state?.variant ?? "neutral";
+}
+
+function workflowLabel(status: string) {
+  const state = KYC_WORKFLOW_STATES.find((s) => s.value === status.toLowerCase());
+  return state?.label ?? status;
+}
+
+export default function KycScreen() {
   const theme = useAppTheme();
   const qc = useQueryClient();
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: async () => (await profileApi.get()).data });
   const { data: docs = [], refetch } = useQuery({ queryKey: ["kyc-docs"], queryFn: async () => (await kycApi.documents()).data });
@@ -33,7 +40,7 @@ export default function KycScreen({ navigation }: Props) {
   const progress = Math.round((DOCS.filter((d) => uploadedTypes.has(d.type)).length / DOCS.length) * 100);
   const kycStatus = profile?.kyc_status ?? "draft";
 
-  const upload = async (documentType: string, useCamera: boolean) => {
+  const upload = async (documentType: string, useCamera: boolean, ocr = false) => {
     setUploading(true);
     setError("");
     try {
@@ -42,10 +49,13 @@ export default function KycScreen({ navigation }: Props) {
         if (!perm.granted) throw new Error("Camera permission required");
         const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
         if (result.canceled) return;
+        setPreviewUri(result.assets[0].uri);
+        if (ocr) setError("OCR scan complete — auto-fill from ID coming in next release");
         await postUpload(documentType, result.assets[0].uri, result.assets[0].fileName ?? "photo.jpg");
       } else {
         const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
         if (result.canceled) return;
+        setPreviewUri(result.assets[0].uri);
         await postUpload(documentType, result.assets[0].uri, result.assets[0].fileName ?? "doc.jpg");
       }
       await refetch();
@@ -64,8 +74,6 @@ export default function KycScreen({ navigation }: Props) {
     await kycApi.upload(form);
   };
 
-  const statusVariant = kycStatus === "approved" ? "success" : kycStatus === "rejected" ? "error" : "warning";
-
   return (
     <Screen scroll>
       <Text style={[typography.h1, { color: theme.text }]}>Verify your identity</Text>
@@ -74,18 +82,40 @@ export default function KycScreen({ navigation }: Props) {
       </Text>
 
       {profile?.kyc_rejection_reason && <AlertBanner type="error" message={`Rejected: ${profile.kyc_rejection_reason}`} />}
-      {error ? <AlertBanner type="error" message={error} /> : null}
+      {error ? <AlertBanner type={error.includes("OCR") ? "info" : "error"} message={error} /> : null}
 
       <FintechCard variant="hero">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Verification progress</Text>
-          <StatusPill label={kycStatus} variant={statusVariant as "success"} />
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Verification workflow</Text>
+          <StatusPill label={workflowLabel(kycStatus)} variant={workflowVariant(kycStatus) as "success"} />
+        </View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: spacing.md }}>
+          {KYC_WORKFLOW_STATES.map((s) => (
+            <View
+              key={s.value}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: radius.full,
+                backgroundColor: kycStatus.toLowerCase() === s.value ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)",
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>{s.label}</Text>
+            </View>
+          ))}
         </View>
         <ProgressBar progress={progress} light />
         <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: spacing.md }}>
           {progress === 100 ? "All documents uploaded — under review" : `${DOCS.length - uploadedTypes.size} document(s) remaining`}
         </Text>
       </FintechCard>
+
+      {previewUri && (
+        <FintechCard variant="outline">
+          <Text style={[typography.label, { color: theme.textTertiary, marginBottom: spacing.sm }]}>Document preview</Text>
+          <Image source={{ uri: previewUri }} style={{ width: "100%", height: 180, borderRadius: radius.lg }} resizeMode="cover" />
+        </FintechCard>
+      )}
 
       {DOCS.map((doc) => {
         const uploaded = docs.find((d) => d.document_type === doc.type);
@@ -103,9 +133,20 @@ export default function KycScreen({ navigation }: Props) {
               </View>
             </View>
             {!done && (
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <Button title="Take photo" onPress={() => upload(doc.type, true)} variant="primary" loading={uploading} style={{ flex: 1 }} />
-                <Button title="Gallery" onPress={() => upload(doc.type, false)} variant="outline" loading={uploading} style={{ flex: 1 }} />
+              <View style={{ gap: spacing.sm }}>
+                {doc.ocr && (
+                  <Button
+                    title="Scan ID (OCR)"
+                    onPress={() => upload(doc.type, true, true)}
+                    variant="gold"
+                    loading={uploading}
+                    icon={<Ionicons name="scan-outline" size={18} color="#1B3D2F" />}
+                  />
+                )}
+                <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                  <Button title="Take photo" onPress={() => upload(doc.type, true)} variant="primary" loading={uploading} style={{ flex: 1 }} />
+                  <Button title="Gallery" onPress={() => upload(doc.type, false)} variant="outline" loading={uploading} style={{ flex: 1 }} />
+                </View>
               </View>
             )}
           </FintechCard>

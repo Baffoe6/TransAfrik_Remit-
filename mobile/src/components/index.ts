@@ -8,3 +8,4 @@ export { ModalSheet, AlertBanner } from "./ModalSheet";
 export { ErrorBoundary } from "./ErrorBoundary";
 export { Title, Muted } from "./ui";
 export * from "./fintech";
+export * from "./worldclass";

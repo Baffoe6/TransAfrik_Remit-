@@ -18,6 +18,10 @@ export const transfersApi = {
     apiClient.post<TransferQuote>("/transfers/calculate", { send_amount_zar, destination_country }),
   create: (data: { beneficiary_id: number; send_amount_zar: string; payment_method_code?: string }) =>
     apiClient.post<TransferDetail>("/transfers", data),
-  timeline: (id: number) => apiClient.get<{ status: string; created_at: string; note?: string }[]>(`/transfers/${id}/timeline`),
+  timeline: async (id: number) => {
+    const { data } = await apiClient.get<{ timeline?: { status: string; created_at: string; note?: string }[] } | { status: string; created_at: string; note?: string }[]>(`/transfers/${id}/timeline`);
+    if (Array.isArray(data)) return data;
+    return data.timeline ?? [];
+  },
   tracking: (id: number) => apiClient.get(`/transfers/${id}/tracking`),
 };
