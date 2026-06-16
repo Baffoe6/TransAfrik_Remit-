@@ -15,6 +15,8 @@ export default function AdminPilotPage() {
   const [customers, setCustomers] = useState<PilotCustomer[]>([]);
   const [invites, setInvites] = useState<PilotInvite[]>([]);
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const load = () => {
     api<PilotCustomer[]>("/admin/pilot/customers").then(setCustomers).catch(() => {});
@@ -23,9 +25,19 @@ export default function AdminPilotPage() {
   useEffect(() => { load(); }, []);
 
   const createInvite = async () => {
-    await api("/admin/pilot/invites", { method: "POST", body: JSON.stringify({ email: email || null, max_uses: 5 }) });
-    setEmail("");
-    load();
+    setError("");
+    setSuccess("");
+    try {
+      const result = await api<{ invite_code: string }>("/admin/pilot/invites", {
+        method: "POST",
+        body: JSON.stringify({ email: email.trim() || null, max_uses: 5 }),
+      });
+      setEmail("");
+      setSuccess(`Created invite: ${result.invite_code}`);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create invite");
+    }
   };
 
   const approve = async (id: number) => {
@@ -36,6 +48,9 @@ export default function AdminPilotPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-[#1B5E3B]">Pilot Programme Admin</h1>
+      <p className="text-sm text-gray-600">Customer registration is open — invites are optional for targeted rollouts only.</p>
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {success ? <p className="text-sm text-green-700">{success}</p> : null}
       <Card>
         <CardHeader><CardTitle>Create Invite</CardTitle></CardHeader>
         <CardContent className="flex gap-2">

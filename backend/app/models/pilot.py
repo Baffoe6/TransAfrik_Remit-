@@ -14,8 +14,8 @@ class PilotSettings(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     pilot_mode_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    invite_only_registration: Mapped[bool] = mapped_column(Boolean, default=True)
-    require_admin_approval: Mapped[bool] = mapped_column(Boolean, default=True)
+    invite_only_registration: Mapped[bool] = mapped_column(Boolean, default=False)
+    require_admin_approval: Mapped[bool] = mapped_column(Boolean, default=False)
     default_max_transfer_zar: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("5000"))
     default_daily_transfer_limit: Mapped[int] = mapped_column(Integer, default=3)
     default_monthly_volume_zar: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("15000"))

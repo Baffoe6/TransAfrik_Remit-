@@ -21,8 +21,8 @@ def get_pilot_settings(db: Session) -> PilotSettings:
     if not settings:
         settings = PilotSettings(
             pilot_mode_enabled=False,
-            invite_only_registration=True,
-            require_admin_approval=True,
+            invite_only_registration=False,
+            require_admin_approval=False,
             default_allowed_corridors=["ZA-GH"],
         )
         db.add(settings)

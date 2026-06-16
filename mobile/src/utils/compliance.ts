@@ -6,7 +6,7 @@ export const COMPLIANCE = {
   partnerPayout: "Payouts are delivered via our partner-powered network.",
   kycRequired: "Identity verification is required before you can send money.",
   complianceReview: "Compliance review may apply to transfers and payouts.",
-  pilotAccess: "Pilot access available — invite code may be required during rollout.",
+  pilotAccess: "Sign up with your mobile number — no invite required.",
   popiaConsent:
     "I consent to IPAYGO (Pty) Ltd processing my personal information in accordance with POPIA for remittance services.",
   amlDeclaration:

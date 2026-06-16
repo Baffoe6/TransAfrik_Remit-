@@ -23,6 +23,15 @@ def test_validate_invite_when_pilot_disabled(monkeypatch):
     assert validate_invite_for_registration(db, "test@example.com", "+27721234567", None) is None
 
 
+def test_validate_invite_open_when_invite_only_disabled(monkeypatch):
+    db = MagicMock()
+    settings = MagicMock()
+    settings.pilot_mode_enabled = True
+    settings.invite_only_registration = False
+    monkeypatch.setattr("app.services.pilot_service.get_pilot_settings", lambda d: settings)
+    assert validate_invite_for_registration(db, "test@example.com", "+27721234567", None) is None
+
+
 def test_validate_invite_requires_code(monkeypatch):
     db = MagicMock()
     settings = MagicMock()

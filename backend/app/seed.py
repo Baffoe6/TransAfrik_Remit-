@@ -311,17 +311,17 @@ def seed():
 
         if not db.query(PilotSettings).first():
             db.add(PilotSettings(
-                pilot_mode_enabled=seed_demo,
-                invite_only_registration=seed_demo,
-                require_admin_approval=seed_demo,
+                pilot_mode_enabled=False,
+                invite_only_registration=False,
+                require_admin_approval=False,
                 default_allowed_corridors=["ZA-GH", "ZA-ZW", "ZA-ZM", "ZA-KE", "ZA-NG", "ZA-UG"],
                 demo_mode_enabled=False,
             ))
             if seed_demo:
                 db.add(PilotInvite(invite_code="PILOTDEMO2026", email=settings.seed_customer_email, max_uses=10))
-                print("Created pilot settings and demo invite PILOTDEMO2026")
+                print("Created demo invite PILOTDEMO2026 (local demo only)")
             else:
-                print("Created production pilot settings (no demo invite)")
+                print("Created open registration pilot settings")
 
         for code, ptype, name, enabled in provider_configs:
             if not db.query(ProviderConfig).filter(ProviderConfig.provider_code == code).first():

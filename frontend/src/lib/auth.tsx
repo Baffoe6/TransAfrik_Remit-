@@ -61,8 +61,6 @@ interface RegisterData {
   first_name: string;
   last_name: string;
   email?: string;
-  invite_code?: string;
-  referral_code?: string;
   accept_popia: boolean;
   accept_terms: boolean;
 }
