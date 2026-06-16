@@ -296,11 +296,13 @@ def register(request: Request, data: RegisterRequest, db: Annotated[Session, Dep
         email=email,
         first_name=data.first_name,
         last_name=data.last_name,
-        pin_hash=hash_pin(data.pin),
+        pin_hash=hash_pin(data.pin) if data.pin else None,
         password_hash=hash_password(data.password) if data.password else None,
         role=UserRole.CUSTOMER,
         status="active",
     )
+    if not user.pin_hash and not user.password_hash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="PIN or password is required")
     db.add(user)
     db.flush()
 

@@ -18,13 +18,13 @@ class RegisterRequest(BaseModel):
     mobile_number: str = Field(min_length=8, max_length=30)
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
-    pin: str = Field(min_length=4, max_length=6)
+    pin: str | None = Field(default=None, min_length=4, max_length=6)
     email: EmailStr | None = None
     invite_code: str | None = Field(default=None, max_length=32)
     referral_code: str | None = Field(default=None, max_length=32)
-    accept_popia: bool
-    accept_terms: bool
-    # Legacy — existing API clients may still send password during migration
+    accept_popia: bool = False
+    accept_terms: bool = False
+    # Legacy v2.0 APK — password registration until PIN build is installed
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
     @field_validator("mobile_number")
@@ -34,15 +34,17 @@ class RegisterRequest(BaseModel):
 
     @field_validator("pin")
     @classmethod
-    def validate_pin(cls, v: str) -> str:
+    def validate_pin(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         return _validate_pin(v)
 
     @model_validator(mode="after")
-    def require_consents(self):
-        if not self.accept_popia:
-            raise ValueError("POPIA consent is required")
-        if not self.accept_terms:
-            raise ValueError("Terms and conditions consent is required")
+    def require_pin_or_password(self):
+        if not self.pin and not self.password:
+            raise ValueError("4-digit PIN is required")
+        if self.pin and (not self.accept_popia or not self.accept_terms):
+            raise ValueError("POPIA and Terms consent required")
         return self
 
 

@@ -52,10 +52,26 @@ apiClient.interceptors.response.use(
         return apiClient(original);
       }
     }
-    const detail = (error.response?.data as { detail?: string })?.detail;
-    throw new Error(typeof detail === "string" ? detail : error.message);
+    throw new Error(formatApiError(error));
   },
 );
+
+function formatApiError(error: AxiosError): string {
+  const data = error.response?.data as {
+    detail?: string | Array<{ msg: string; loc: (string | number)[] }>;
+  };
+  if (!data?.detail) return error.message;
+  if (typeof data.detail === "string") return data.detail;
+  if (Array.isArray(data.detail)) {
+    return data.detail
+      .map((item) => {
+        const field = item.loc?.slice(-1)[0];
+        return field ? `${field}: ${item.msg}` : item.msg;
+      })
+      .join(". ");
+  }
+  return error.message;
+}
 
 export function getApiBaseUrl() {
   return API_URL;

@@ -57,6 +57,17 @@ def test_register_request_email_optional():
     assert req.email is None
 
 
+def test_legacy_password_register_without_pin():
+    req = RegisterRequest(
+        mobile_number="+27821234567",
+        first_name="Legacy",
+        last_name="User",
+        password="Password123!",
+    )
+    assert req.pin is None
+    assert req.password == "Password123!"
+
+
 def test_pin_login_request_normalizes_mobile():
     req = PinLoginRequest(mobile_number="0821234567", pin="1234")
     assert req.mobile_number.startswith("+")
