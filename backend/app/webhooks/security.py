@@ -8,13 +8,14 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models.webhook import WebhookEvent
+from app.models.webhook import ProviderConfig, WebhookEvent
 from app.redis.client import get_redis
 from app.redis.webhook_queue import enqueue_webhook
 
 REPLAY_PREFIX = "wh:nonce:"
 IDEMPOTENCY_PREFIX = "wh:idemp:"
 DEFAULT_TOLERANCE_SECONDS = 300
+FLUTTERWAVE_WEBHOOK_PROVIDERS = frozenset({"flutterwave", "card"})
 
 
 def verify_hmac_signature(payload: bytes, signature: str | None, secret: str | None) -> bool:
@@ -23,6 +24,77 @@ def verify_hmac_signature(payload: bytes, signature: str | None, secret: str | N
     expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
     provided = signature.removeprefix("sha256=")
     return hmac.compare_digest(expected, provided)
+
+
+def resolve_flutterwave_webhook_secret(config: ProviderConfig | None = None) -> str | None:
+    """Prefer FLUTTERWAVE_WEBHOOK_SECRET; fall back to provider config webhook_secret."""
+    settings = get_settings()
+    if settings.flutterwave_webhook_secret:
+        return settings.flutterwave_webhook_secret
+    if config and config.webhook_secret:
+        return config.webhook_secret
+    return None
+
+
+def verify_flutterwave_verif_hash(verif_hash: str | None, secret: str | None) -> tuple[bool, str | None]:
+    """Validate Flutterwave `verif-hash` header against the configured webhook secret."""
+    if not secret:
+        return False, "Flutterwave webhook secret not configured"
+    if not verif_hash:
+        return False, "Missing verif-hash header"
+    if not hmac.compare_digest(verif_hash.strip(), secret.strip()):
+        return False, "Invalid verif-hash"
+    return True, None
+
+
+def extract_flutterwave_external_id(payload: dict) -> str | None:
+    data = payload.get("data")
+    if isinstance(data, dict):
+        for key in ("id", "flw_ref", "tx_ref"):
+            value = data.get(key)
+            if value is not None:
+                return str(value)
+    for key in ("id", "event_id"):
+        value = payload.get(key)
+        if value is not None:
+            return str(value)
+    return None
+
+
+def secure_flutterwave_webhook_ingress(
+    db: Session,
+    *,
+    provider_code: str,
+    payload: dict,
+    verif_hash: str | None,
+    secret: str | None,
+) -> tuple[bool, str | None, str | None]:
+    """Returns (ok, error_message, external_id)."""
+    ok, err = verify_flutterwave_verif_hash(verif_hash, secret)
+    if not ok:
+        return False, err, None
+
+    settings = get_settings()
+    external_id = extract_flutterwave_external_id(payload)
+
+    if settings.webhook_idempotency_enabled:
+        ok, err = check_idempotency(db, provider_code, external_id)
+        if not ok:
+            return False, err, external_id
+
+    return True, None, external_id
+
+
+def flutterwave_webhook_status_code(error: str | None) -> int:
+    if not error:
+        return 200
+    if error == "Missing verif-hash header" or error == "Flutterwave webhook secret not configured":
+        return 401
+    if error == "Invalid verif-hash":
+        return 403
+    if error and ("Duplicate" in error or "already processed" in error.lower()):
+        return 409
+    return 401
 
 
 def check_timestamp_replay(timestamp_header: str | None, tolerance: int = DEFAULT_TOLERANCE_SECONDS) -> tuple[bool, str | None]:

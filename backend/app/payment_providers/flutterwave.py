@@ -143,24 +143,23 @@ class FlutterwaveProvider(PaymentProvider):
 
     def process_webhook(self, payload: dict) -> WebhookResult:
         event = payload.get("event") or payload.get("event_type") or ""
-        data = payload.get("data") or payload
+        if event != "charge.completed":
+            return WebhookResult(success=False, raw_payload=payload)
 
-        if event == "charge.completed" or data.get("status") == "successful":
-            ref = data.get("tx_ref") or data.get("reference") or payload.get("tx_ref")
-            if ref:
-                return WebhookResult(
-                    success=True,
-                    reference_number=str(ref),
-                    status="paid",
-                    raw_payload=payload,
-                )
+        data = payload.get("data") or {}
+        if not isinstance(data, dict) or data.get("status") != "successful":
+            return WebhookResult(success=False, raw_payload=payload)
 
-        if event in ("charge.failed",) or data.get("status") == "failed":
-            ref = data.get("tx_ref")
-            if ref:
-                return WebhookResult(success=True, reference_number=str(ref), status="failed", raw_payload=payload)
+        ref = data.get("tx_ref") or data.get("reference")
+        if not ref:
+            return WebhookResult(success=False, raw_payload=payload)
 
-        return WebhookResult(success=False, raw_payload=payload)
+        return WebhookResult(
+            success=True,
+            reference_number=str(ref),
+            status="paid",
+            raw_payload=payload,
+        )
 
     def validate_credentials(self) -> bool:
         return self.is_live
