@@ -40,6 +40,21 @@ class GeneratePaymentRequest(BaseModel):
     payment_method_code: str = Field(min_length=2, max_length=50)
 
 
+class FlutterwaveSessionResponse(BaseModel):
+    payment_url: str
+    session_ref: str
+    provider: str = "flutterwave"
+    status: str = "pending"
+    expires_at: str | None = None
+
+
+class PaymentStatusResponse(BaseModel):
+    transfer_id: int
+    status: str
+    payment_status: str
+    reference_number: str | None = None
+
+
 class PaymentVerificationRequest(BaseModel):
     status: str
     notes: str | None = None

@@ -10,6 +10,7 @@ import ActivityScreen from "../features/activity/ActivityScreen";
 import ProfileScreen from "../features/profile/ProfileScreen";
 import BeneficiaryFormScreen from "../features/beneficiaries/BeneficiaryFormScreen";
 import SendFlowScreen from "../features/transfers/SendFlowScreen";
+import FlutterwavePaymentScreen from "../features/transfers/FlutterwavePaymentScreen";
 import PaymentSuccessScreen from "../features/transfers/PaymentSuccessScreen";
 import TransferTrackingScreen from "../features/transfers/TransferTrackingScreen";
 import ReceiptScreen from "../features/transfers/ReceiptScreen";
@@ -36,6 +37,7 @@ export type RootStackParamList = {
   Tabs: { screen?: keyof MainTabParamList } | undefined;
   SendFlow: undefined;
   PaymentSuccess: { transferId: number; reference: PaymentReference };
+  FlutterwavePayment: { transferId: number };
   TransferTracking: { id: number };
   Receipt: { id: number };
   BeneficiaryForm: { id?: number };
@@ -116,7 +118,8 @@ export function MainNavigator() {
     >
       <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
       <Stack.Screen name="SendFlow" component={SendFlowScreen} options={{ title: "Send money" }} />
-      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: "Pay now", headerBackVisible: false }} />
+      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: "Payment instructions", headerBackVisible: false }} />
+      <Stack.Screen name="FlutterwavePayment" component={FlutterwavePaymentScreen} options={{ title: "Card payment" }} />
       <Stack.Screen name="TransferTracking" component={TransferTrackingScreen} options={{ title: "Track transfer" }} />
       <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: "Receipt" }} />
       <Stack.Screen name="BeneficiaryForm" component={BeneficiaryFormScreen} options={{ title: "Recipient" }} />

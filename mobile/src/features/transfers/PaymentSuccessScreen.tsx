@@ -1,48 +1,78 @@
-import { Share, Text, View } from "react-native";
+import { Linking, Share, Text, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Button, Caption, Card, H2, Screen } from "../../components";
+import { Ionicons } from "@expo/vector-icons";
+import QRCode from "react-native-qrcode-svg";
+import { AmountDisplay, Button, FintechCard, Screen } from "../../components";
 import { formatZAR } from "../../utils/format";
+import { spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
-import { spacing } from "../../theme/spacing";
 import { RootStackParamList } from "../../navigation/MainNavigator";
+import { COMPLIANCE } from "../../utils/compliance";
 import type { PaymentReference } from "../../api/payments";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PaymentSuccess">;
 
+const RETAIL_PARTNERS = ["Pay@", "EasyPay", "Shoprite", "Pick n Pay", "Boxer"];
+
 export default function PaymentSuccessScreen({ navigation, route }: Props) {
-  const { transferId, reference } = route.params as { transferId: number; reference: PaymentReference };
+  const { transferId, reference } = route.params;
+  const theme = useAppTheme();
 
   const shareVoucher = async () => {
-    const msg = `TransAfrik Payment\nRef: ${reference.reference_number}\nVoucher: ${reference.voucher_number ?? "—"}\nAmount: ${formatZAR(reference.amount)}`;
+    const msg = [
+      "TransAfrik Remit — Payment Instructions",
+      `Reference: ${reference.reference_number}`,
+      reference.voucher_number ? `Voucher: ${reference.voucher_number}` : null,
+      `Amount: ${formatZAR(reference.amount)}`,
+      reference.expiry_date ? `Pay before: ${reference.expiry_date}` : null,
+      "",
+      "Pay at Pay@, EasyPay or participating retailers.",
+    ].filter(Boolean).join("\n");
     await Share.share({ message: msg });
+  };
+
+  const shareWhatsApp = () => {
+    const text = encodeURIComponent(`TransAfrik payment ref: ${reference.reference_number} — ${formatZAR(reference.amount)}`);
+    Linking.openURL(`whatsapp://send?text=${text}`);
   };
 
   return (
     <Screen scroll>
       <View style={{ alignItems: "center", marginBottom: spacing.xl }}>
-        <Text style={{ fontSize: 64 }}>✅</Text>
-        <H2>Payment Reference Ready</H2>
-        <Caption>Pay at retail to complete your transfer</Caption>
+        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: theme.primaryMuted, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name="receipt-outline" size={28} color={theme.primary} />
+        </View>
+        <Text style={[typography.h1, { color: theme.text, marginTop: spacing.md }]}>Payment instructions</Text>
+        <Text style={[typography.body, { color: theme.textSecondary, textAlign: "center" }]}>Complete payment to start processing your transfer</Text>
       </View>
 
-      <Card elevated>
-        <Caption>Payment Reference</Caption>
-        <Text style={[typography.h2, { color: "#1B5E3B" }]}>{reference.reference_number}</Text>
-        {reference.voucher_number && <Text style={typography.body}>Voucher: {reference.voucher_number}</Text>}
-        <Text style={typography.bodyBold}>Amount: {formatZAR(reference.amount)}</Text>
-        {reference.expiry_date && <Caption>Expires: {reference.expiry_date}</Caption>}
-        {reference.qr_data && (
-          <View style={{ backgroundColor: "#F3F4F6", padding: spacing.lg, borderRadius: 12, alignItems: "center", marginTop: spacing.md }}>
-            <Text style={typography.caption}>QR / Barcode</Text>
-            <Text style={{ fontFamily: "monospace" }}>{reference.qr_data.slice(0, 40)}...</Text>
+      <FintechCard variant="elevated">
+        <Text style={[typography.label, { color: theme.textTertiary }]}>Payment reference</Text>
+        <Text style={[typography.h2, { color: theme.primary }]}>{reference.reference_number}</Text>
+        {reference.voucher_number ? <Text style={[typography.body, { color: theme.text, marginTop: 4 }]}>Voucher: {reference.voucher_number}</Text> : null}
+        <AmountDisplay label="Amount to pay" amount={formatZAR(reference.amount)} size="sm" />
+        {reference.expiry_date ? <Text style={[typography.caption, { color: theme.warning, marginTop: spacing.sm }]}>Expires: {reference.expiry_date}</Text> : null}
+
+        {(reference.qr_data || reference.barcode_data) && (
+          <View style={{ alignItems: "center", marginTop: spacing.lg }}>
+            <QRCode value={reference.qr_data ?? reference.barcode_data ?? reference.reference_number} size={140} />
+            <Text style={[typography.caption, { color: theme.textTertiary, marginTop: spacing.sm }]}>Scan at retailer</Text>
           </View>
         )}
-        <Caption>Present this reference at Pay@, EasyPay, or your selected retailer</Caption>
-      </Card>
 
-      <Button title="Track Transfer" onPress={() => navigation.replace("TransferTracking", { id: transferId })} />
-      <Button title="Share via WhatsApp" onPress={shareVoucher} variant="outline" />
-      <Button title="View Receipt" onPress={() => navigation.navigate("Receipt", { id: transferId })} variant="secondary" />
+        <Text style={[typography.caption, { color: theme.textSecondary, marginTop: spacing.md }]}>
+          Pay at: {RETAIL_PARTNERS.join(" · ")}
+        </Text>
+      </FintechCard>
+
+      <Text style={[typography.caption, { color: theme.textTertiary, marginBottom: spacing.md, textAlign: "center" }]}>
+        {COMPLIANCE.complianceReview}
+      </Text>
+
+      <Button title="Track transfer" onPress={() => navigation.replace("TransferTracking", { id: transferId })} variant="gold" />
+      <Button title="Share via WhatsApp" onPress={shareWhatsApp} variant="primary" />
+      <Button title="Share instructions" onPress={shareVoucher} variant="outline" />
+      <Button title="View receipt" onPress={() => navigation.navigate("Receipt", { id: transferId })} variant="outline" />
       <Button title="Done" onPress={() => navigation.navigate("Tabs")} variant="ghost" />
     </Screen>
   );

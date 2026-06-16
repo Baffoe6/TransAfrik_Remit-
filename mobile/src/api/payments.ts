@@ -28,10 +28,30 @@ export interface PaymentReference {
   created_at: string;
 }
 
+export interface FlutterwaveSession {
+  payment_url: string;
+  session_ref: string;
+  provider: string;
+  status: string;
+  expires_at?: string;
+}
+
+export interface PaymentStatus {
+  transfer_id: number;
+  status: string;
+  payment_status: string;
+  reference_number?: string;
+}
+
 export const paymentsApi = {
   methods: () => apiClient.get<PaymentMethod[]>("/payments/methods"),
   generate: (transferId: number, payment_method_code: string) =>
     apiClient.post<PaymentReference>(`/payments/transfers/${transferId}/generate`, { payment_method_code }),
   getReference: (transferId: number) =>
     apiClient.get<PaymentReference | null>(`/payments/transfers/${transferId}/reference`),
+  voucherPdfUrl: (transferId: number) => `${apiClient.defaults.baseURL}/payments/transfers/${transferId}/voucher.pdf`,
+  flutterwaveSession: (transferId: number) =>
+    apiClient.post<FlutterwaveSession>(`/payments/transfers/${transferId}/flutterwave/session`),
+  paymentStatus: (transferId: number) =>
+    apiClient.get<PaymentStatus>(`/payments/transfers/${transferId}/payment-status`),
 };

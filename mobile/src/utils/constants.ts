@@ -16,11 +16,11 @@ export const GHANA_MM_PROVIDERS = [
 export const RELATIONSHIPS = ["Family", "Friend", "Spouse", "Parent", "Child", "Business", "Other"];
 
 export const TRANSFER_STATUS_LABELS: Record<string, string> = {
-  draft: "Draft",
-  pending_payment: "Pending",
-  payment_received: "Payment Received",
-  compliance_review: "Processing",
-  submitted_to_partner: "Processing",
+  draft: "Transfer created",
+  pending_payment: "Awaiting payment",
+  payment_received: "Payment received",
+  compliance_review: "Compliance review",
+  submitted_to_partner: "Submitted to partner",
   processing: "Processing",
   completed: "Completed",
   cancelled: "Cancelled",
@@ -53,9 +53,11 @@ export const BENEFICIARY_CATEGORIES = [
 ] as const;
 
 export const KYC_WORKFLOW_STATES = [
-  { value: "draft", label: "Draft", variant: "neutral" as const },
+  { value: "not_submitted", label: "Not started", variant: "neutral" as const },
+  { value: "draft", label: "In progress", variant: "neutral" as const },
+  { value: "pending", label: "Submitted", variant: "info" as const },
   { value: "submitted", label: "Submitted", variant: "info" as const },
-  { value: "reviewing", label: "Reviewing", variant: "warning" as const },
+  { value: "reviewing", label: "Under review", variant: "warning" as const },
   { value: "approved", label: "Approved", variant: "success" as const },
   { value: "rejected", label: "Rejected", variant: "error" as const },
 ] as const;
@@ -83,6 +85,6 @@ export const PAYOUT_PARTNERS = [
 export const FAQ_ITEMS = [
   { q: "How long do transfers take?", a: "Most mobile money transfers arrive same day. Bank and cash pickup may take 1–2 business days." },
   { q: "What payment methods are supported?", a: "Pay@, EasyPay, EFT, and card payments via our partners." },
-  { q: "Is my money safe?", a: "TransAfrik uses licensed partners and FICA-compliant KYC. We never hold your funds directly." },
+  { q: "Is my money safe?", a: "TransAfrik uses secure customer verification and approved payment and remittance partners. We do not hold your funds directly." },
   { q: "How do I complete KYC?", a: "Upload your ID or passport, proof of address, and a selfie from the KYC section in your profile." },
 ];

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AlertBanner, Button, FintechCard, Input, Screen, StatusPill } from "../../components";
 import { supportApi } from "../../api";
 import { FAQ_ITEMS } from "../../utils/constants";
+import { SUPPORT_CATEGORIES, COMPLIANCE } from "../../utils/compliance";
 import { spacing, useAppTheme, radius } from "../../theme";
 import { typography } from "../../theme/typography";
 import { formatDate } from "../../utils/format";
@@ -15,6 +16,7 @@ const WHATSAPP_URL = "https://wa.me/27123456789?text=Hi%20TransAfrik%2C%20I%20ne
 export default function SupportScreen() {
   const qc = useQueryClient();
   const theme = useAppTheme();
+  const [category, setCategory] = useState("general");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +33,10 @@ export default function SupportScreen() {
     setLoading(true);
     setError("");
     try {
-      await supportApi.createTicket({ subject, message });
+      await supportApi.createTicket({
+        subject: `[${SUPPORT_CATEGORIES.find((c) => c.value === category)?.label ?? category}] ${subject}`,
+        message,
+      });
       setSubject("");
       setMessage("");
       await refetch();
@@ -109,6 +114,14 @@ export default function SupportScreen() {
           <FintechCard variant="elevated">
             <Text style={[typography.h3, { color: theme.text, marginBottom: spacing.md }]}>Create ticket</Text>
             {error ? <AlertBanner type="error" message={error} /> : null}
+            <Text style={[typography.label, { color: theme.textTertiary, marginBottom: spacing.xs }]}>Category</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginBottom: spacing.md }}>
+              {SUPPORT_CATEGORIES.map((c) => (
+                <TouchableOpacity key={c.value} onPress={() => setCategory(c.value)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full, backgroundColor: category === c.value ? theme.primary : theme.surfaceMuted }}>
+                  <Text style={{ color: category === c.value ? "#fff" : theme.text, fontSize: 12, fontWeight: "600" }}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <Input label="Subject" value={subject} onChangeText={setSubject} />
             <Input label="Message" value={message} onChangeText={setMessage} multiline />
             <Button title="Submit ticket" onPress={submit} loading={loading} />

@@ -15,6 +15,7 @@ interface AuthState {
     first_name: string;
     last_name: string;
     email?: string;
+    invite_code?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;

@@ -22,6 +22,8 @@ import { radius, spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { Beneficiary } from "../../types";
+import { useTransferEligibility } from "../../hooks/useTransferEligibility";
+import { FLUTTERWAVE_METHOD_CODES, COMPLIANCE } from "../../utils/compliance";
 import { hapticSuccess } from "../../services/haptics";
 
 type Props = NativeStackScreenProps<RootStackParamList, "SendFlow">;
@@ -67,6 +69,8 @@ export default function SendFlowScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [templateName, setTemplateName] = useState("");
 
+  const eligibility = useTransferEligibility();
+
   const { data: beneficiaries = [] } = useQuery({
     queryKey: ["beneficiaries"],
     queryFn: async () => (await beneficiariesApi.list()).data,
@@ -92,6 +96,10 @@ export default function SendFlowScreen({ navigation }: Props) {
 
   const confirm = async () => {
     if (!flow.beneficiary || !flow.paymentMethod) return;
+    if (!eligibility.canTransfer) {
+      setError(eligibility.blockers.join(" · "));
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -100,9 +108,14 @@ export default function SendFlowScreen({ navigation }: Props) {
         send_amount_zar: flow.amount,
         payment_method_code: flow.paymentMethod.code,
       });
-      const { data: ref } = await paymentsApi.generate(data.id, flow.paymentMethod.code);
       flow.setTransferId(data.id);
       hapticSuccess();
+      const code = flow.paymentMethod.code.toLowerCase();
+      if (FLUTTERWAVE_METHOD_CODES.has(code)) {
+        navigation.replace("FlutterwavePayment", { transferId: data.id });
+        return;
+      }
+      const { data: ref } = await paymentsApi.generate(data.id, flow.paymentMethod.code);
       navigation.replace("PaymentSuccess", { transferId: data.id, reference: ref });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Transfer failed");
@@ -157,6 +170,15 @@ export default function SendFlowScreen({ navigation }: Props) {
       <Text style={[typography.label, { color: theme.textTertiary, marginBottom: 4 }]}>Step {flow.step} of 5</Text>
       <Text style={[typography.h1, { color: theme.text, marginBottom: spacing.lg }]}>{STEP_LABELS[flow.step - 1]}</Text>
       {error ? <AlertBanner type="error" message={error} /> : null}
+      {!eligibility.canTransfer && !eligibility.isLoading ? (
+        <FintechCard variant="accent">
+          <Text style={[typography.bodyBold, { color: theme.text, marginBottom: spacing.sm }]}>Complete before sending</Text>
+          {eligibility.blockers.map((b) => (
+            <Text key={b} style={[typography.caption, { color: theme.textSecondary }]}>• {b}</Text>
+          ))}
+          <Button title="Verify identity" onPress={() => navigation.navigate("Kyc")} variant="outline" style={{ marginTop: spacing.sm }} />
+        </FintechCard>
+      ) : null}
 
       {flow.step === 1 && (
         <>

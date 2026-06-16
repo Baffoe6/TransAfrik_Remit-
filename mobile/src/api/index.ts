@@ -7,3 +7,4 @@ export { walletApi, referralApi } from "./wallet";
 export { paymentsApi } from "./payments";
 export { supportApi } from "./support";
 export { notificationsApi } from "./notifications";
+export { pilotApi } from "./pilot";

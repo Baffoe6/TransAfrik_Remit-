@@ -1,6 +1,6 @@
-# TransAfrik Remit — Mobile Status (Phase 16)
+# TransAfrik Remit — Mobile Status (v2.0 Production Candidate)
 
-**Release:** TransAfrik Remit Mobile v1.0 Phase 16  
+**Release:** TransAfrik Remit Mobile v2.0.0  
 **Date:** June 2026  
 **API:** [api.ipaygo.co.za](https://api.ipaygo.co.za)
 
@@ -8,9 +8,9 @@
 
 ## Executive Summary
 
-**World-class fintech remittance** React Native app (Expo SDK 52 + TypeScript) comparable to Wise, Revolut, and Remitly. Live exchange-rate calculator, six African corridors, transfer templates, QR receipts, security center, notification inbox, and premium design system v2.
+**Production-ready customer app** — real registration, OTP verification, KYC, beneficiaries, transfers, Flutterwave payment readiness, and retail vouchers. No demo customer assumptions.
 
-See [PHASE16_WORLD_CLASS_UPGRADE.md](PHASE16_WORLD_CLASS_UPGRADE.md) for full feature breakdown.
+See [REAL_USE_READINESS.md](REAL_USE_READINESS.md) · [FLUTTERWAVE_MOBILE_INTEGRATION.md](FLUTTERWAVE_MOBILE_INTEGRATION.md)
 
 ---
 

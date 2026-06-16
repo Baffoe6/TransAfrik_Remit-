@@ -6,15 +6,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { AlertBanner, Button, FintechCard, ProgressBar, Screen, StatusPill } from "../../components";
 import { kycApi, profileApi } from "../../api";
+import { KYC_DOC_TYPES, COMPLIANCE } from "../../utils/compliance";
 import { KYC_WORKFLOW_STATES } from "../../utils/constants";
 import { spacing, useAppTheme, radius } from "../../theme";
 import { typography } from "../../theme/typography";
 
-const DOCS = [
-  { type: "id_document", label: "SA ID or Passport", icon: "card-outline" as const, hint: "Clear photo of your ID document", ocr: true },
-  { type: "proof_of_address", label: "Proof of Address", icon: "home-outline" as const, hint: "Utility bill or bank statement (3 months)", ocr: false },
-  { type: "selfie", label: "Selfie Verification", icon: "person-circle-outline" as const, hint: "Hold your ID next to your face", ocr: false },
-];
+const DOCS = KYC_DOC_TYPES.map((d) => ({ ...d, ocr: d.type === "id_passport" }));
 
 function workflowVariant(status: string) {
   const state = KYC_WORKFLOW_STATES.find((s) => s.value === status.toLowerCase());
@@ -78,7 +75,7 @@ export default function KycScreen() {
     <Screen scroll>
       <Text style={[typography.h1, { color: theme.text }]}>Verify your identity</Text>
       <Text style={[typography.body, { color: theme.textSecondary, marginBottom: spacing.lg }]}>
-        Required by FICA regulations. Your data is encrypted and secure.
+        {COMPLIANCE.kycRequired} Documents are stored securely via our backend — not on your device.
       </Text>
 
       {profile?.kyc_rejection_reason && <AlertBanner type="error" message={`Rejected: ${profile.kyc_rejection_reason}`} />}

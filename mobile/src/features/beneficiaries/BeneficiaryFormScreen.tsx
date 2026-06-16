@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AlertBanner, Button, Input, Screen, H2, Caption } from "../../components";
 import { beneficiariesApi } from "../../api";
 import { GHANA_MM_PROVIDERS, RELATIONSHIPS } from "../../utils/constants";
+import { isValidGhanaMobile } from "../../utils/validation";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { BeneficiaryType } from "../../types";
 
@@ -47,6 +48,12 @@ export default function BeneficiaryFormScreen({ navigation, route }: Props) {
   const save = async () => {
     setLoading(true);
     setError("");
+    if (!form.full_name.trim()) { setError("Full name is required"); setLoading(false); return; }
+    if (type === "mobile_money" && form.mobile_wallet_number && !isValidGhanaMobile(form.mobile_wallet_number)) {
+      setError("Enter a valid Ghana mobile money number");
+      setLoading(false);
+      return;
+    }
     const payload = { beneficiary_type: type, ...form, relationship_to_sender: form.relationship_to_sender };
     try {
       if (id) await beneficiariesApi.update(id, payload);

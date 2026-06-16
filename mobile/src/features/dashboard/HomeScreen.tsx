@@ -123,7 +123,7 @@ export default function HomeScreen() {
           subtitle={`Send to ${corridor?.name ?? "Africa"} — live rates & tracking`}
           rightAction={{ icon: "notifications-outline", onPress: () => navigation.navigate("Notifications") }}
         >
-          <TrustBadge items={["Licensed partners", "Encrypted", "FICA compliant"]} />
+          <TrustBadge items={["Secure verification", "Partner payouts", "Encrypted"]} />
         </HeroHeader>
 
         <View style={{ paddingHorizontal: spacing.lg, marginTop: -spacing.lg }}>

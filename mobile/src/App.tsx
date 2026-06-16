@@ -10,6 +10,7 @@ import { AuthNavigator } from "./navigation/AuthNavigator";
 import { MainNavigator } from "./navigation/MainNavigator";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAppTheme } from "./theme";
+import { PhoneVerificationGate } from "./features/auth/PhoneVerificationGate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,10 +43,18 @@ function RootNav() {
   const navTheme = scheme === "dark" ? DarkTheme : DefaultTheme;
   navTheme.colors.primary = theme.primary;
 
+  const needsPhoneVerify = user && !user.phone_verified;
+
   return (
     <NavigationContainer theme={navTheme}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      {user ? <MainNavigator /> : <AuthNavigator showOnboarding={!onboardingComplete} />}
+      {!user ? (
+        <AuthNavigator showOnboarding={!onboardingComplete} />
+      ) : needsPhoneVerify ? (
+        <PhoneVerificationGate />
+      ) : (
+        <MainNavigator />
+      )}
     </NavigationContainer>
   );
 }

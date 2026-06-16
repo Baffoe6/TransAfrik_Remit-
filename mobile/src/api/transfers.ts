@@ -23,5 +23,7 @@ export const transfersApi = {
     if (Array.isArray(data)) return data;
     return data.timeline ?? [];
   },
+  uploadPaymentProof: (id: number, form: FormData) =>
+    apiClient.post(`/transfers/${id}/payment-proof`, form, { headers: { "Content-Type": "multipart/form-data" } }),
   tracking: (id: number) => apiClient.get(`/transfers/${id}/tracking`),
 };

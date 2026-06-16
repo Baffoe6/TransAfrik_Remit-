@@ -26,10 +26,7 @@ export default function SecurityScreen({ navigation }: Props) {
 
   const { data: devices = [], isLoading, isError } = useQuery({
     queryKey: ["trusted-devices"],
-    queryFn: async () => {
-      const { data } = await authApi.devices();
-      return Array.isArray(data) ? data : [];
-    },
+    queryFn: async () => (await authApi.devices()).data,
     retry: 1,
   });
 
