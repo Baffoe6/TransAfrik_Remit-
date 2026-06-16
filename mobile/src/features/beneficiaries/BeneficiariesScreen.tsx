@@ -49,7 +49,7 @@ export default function BeneficiariesScreen() {
   });
 
   const quickSend = (b: Beneficiary) => {
-    if (b.status !== "approved") return;
+    if (b.status === "rejected") return;
     hapticLight();
     sendFlow.reset();
     sendFlow.setDestination(b.country, `ZA-${b.country}`, b.country === "GH" ? "GHS" : "USD");
@@ -73,10 +73,10 @@ export default function BeneficiariesScreen() {
   };
 
   const verifyVariant = (status: string) =>
-    status === "approved" ? "success" : status === "pending" ? "warning" : status === "rejected" ? "error" : "neutral";
+    status === "rejected" ? "error" : "success";
 
   const statusLabel = (status: string) =>
-    status === "approved" ? "Active" : status === "pending" ? "Under review" : status;
+    status === "rejected" ? "Rejected" : "Active";
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>

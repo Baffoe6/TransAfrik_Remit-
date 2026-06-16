@@ -86,8 +86,8 @@ def create_transfer(
     )
     if not beneficiary:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Beneficiary not found")
-    if beneficiary.status != BeneficiaryStatus.APPROVED:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Beneficiary must be approved")
+    if beneficiary.status == BeneficiaryStatus.REJECTED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Beneficiary has been rejected")
 
     from app.services.pilot_service import check_transfer_limits
 

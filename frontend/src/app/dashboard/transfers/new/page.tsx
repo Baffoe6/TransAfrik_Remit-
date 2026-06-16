@@ -24,9 +24,9 @@ export default function NewTransferPage() {
 
   useEffect(() => {
     api<Beneficiary[]>("/beneficiaries").then((b) => {
-      const approved = b.filter((x) => x.status === "approved");
-      setBeneficiaries(approved);
-      if (approved.length) setBeneficiaryId(String(approved[0].id));
+      const active = b.filter((x) => x.status !== "rejected");
+      setBeneficiaries(active);
+      if (active.length) setBeneficiaryId(String(active[0].id));
     });
     api<PaymentMethod[]>("/payments/methods").then((m) => {
       const active = m.filter((x) => x.is_active && !x.is_instant);

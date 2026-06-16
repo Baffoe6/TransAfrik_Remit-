@@ -64,4 +64,9 @@ def evaluate_beneficiary_compliance(
 
 
 def resolve_beneficiary_status(flags: list[dict]) -> BeneficiaryStatus:
-    return BeneficiaryStatus.PENDING if flags else BeneficiaryStatus.APPROVED
+    """Recipients are customer-managed and usable for sends immediately.
+
+    Compliance flags are retained for admin review but do not block sending.
+    """
+    _ = flags
+    return BeneficiaryStatus.APPROVED

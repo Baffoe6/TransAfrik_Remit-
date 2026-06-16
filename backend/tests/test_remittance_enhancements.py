@@ -13,9 +13,9 @@ def test_resolve_beneficiary_status_approved_when_no_flags():
     assert resolve_beneficiary_status([]) == BeneficiaryStatus.APPROVED
 
 
-def test_resolve_beneficiary_status_pending_when_flagged():
+def test_resolve_beneficiary_status_approved_even_when_flagged():
     flags = [{"type": "name_mismatch", "message": "test"}]
-    assert resolve_beneficiary_status(flags) == BeneficiaryStatus.PENDING
+    assert resolve_beneficiary_status(flags) == BeneficiaryStatus.APPROVED
 
 
 def test_pricing_uses_destination_currency(monkeypatch):
