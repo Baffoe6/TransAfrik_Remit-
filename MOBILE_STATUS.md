@@ -84,26 +84,20 @@ mobile/src/
 
 ---
 
-## EAS Android Preview Build (Phase 16)
+## EAS Android Preview Build (v2.0)
 
 | Field | Value |
 |-------|-------|
 | **Status** | **FINISHED** |
 | **Profile** | `preview` |
-| **Platform** | Android APK |
-| **App version** | `1.0.0-preview` |
+| **App version** | `2.0.0` |
 | **Build number** | `1` |
-| **Git commit** | `a32874e` — feat(mobile): world-class fintech remittance experience upgrade |
-| **Build ID** | `f1697bb3-a1b4-4161-81e9-e575cbabd2ae` |
-| **Completed** | 2026-06-15 22:35 UTC |
-| **APK download** | [Direct APK](https://expo.dev/artifacts/eas/e1UC1L7cZ6_s7kKDut9p8xQlYbd8DifPTQwa7TTD23Q.apk) |
-| **Install page (QR)** | [EAS build page](https://expo.dev/accounts/baffoe6/projects/transafrik-remit/builds/f1697bb3-a1b4-4161-81e9-e575cbabd2ae) |
-| **API target** | `https://api.ipaygo.co.za` |
-| **Channel** | `preview` |
+| **Git commit (target)** | `d7d699e` — production-ready remittance app |
+| **Build ID** | `55c859d5-0bc0-4116-b106-bb6b3bee933c` |
+| **APK download** | [Direct APK](https://expo.dev/artifacts/eas/cMCa2poSIlZFa7esphL7PLj9nViEqbjU79RXTnsoKL4.apk) |
+| **QR install** | [EAS build page](https://expo.dev/accounts/baffoe6/projects/transafrik-remit/builds/55c859d5-0bc0-4116-b106-bb6b3bee933c) |
 
-**Install:** Open the EAS build page on an Android device and scan the QR code, or download the APK directly.
-
-**QA checklist:** [ANDROID_PREVIEW_TEST_PLAN.md](ANDROID_PREVIEW_TEST_PLAN.md)
+**QA:** [MOBILE_QA_TEST_PLAN.md](MOBILE_QA_TEST_PLAN.md) · [PILOT_CUSTOMER_TEST_GUIDE.md](PILOT_CUSTOMER_TEST_GUIDE.md)
 
 ---
 
