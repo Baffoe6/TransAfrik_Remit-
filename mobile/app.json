@@ -2,7 +2,7 @@
   "expo": {
     "name": "TransAfrik Remit",
     "slug": "transafrik-remit",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -60,6 +60,13 @@
         "expo-camera",
         {
           "cameraPermission": "Capture selfie for KYC verification"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow TransAfrik Remit to access your photos for KYC document upload.",
+          "cameraPermission": "Allow TransAfrik Remit to use the camera to capture KYC documents."
         }
       ],
       "expo-font"

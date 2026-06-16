@@ -1,6 +1,6 @@
 {
   "name": "transafrik-mobile",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -29,6 +29,7 @@
     "expo-camera": "~16.0.18",
     "expo-constants": "~17.0.8",
     "expo-document-picker": "~13.0.3",
+    "expo-file-system": "~18.0.12",
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-image-picker": "~16.0.6",
