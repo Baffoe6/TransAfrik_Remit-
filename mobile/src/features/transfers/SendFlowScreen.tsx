@@ -176,7 +176,9 @@ export default function SendFlowScreen({ navigation }: Props) {
           {eligibility.blockers.map((b) => (
             <Text key={b} style={[typography.caption, { color: theme.textSecondary }]}>• {b}</Text>
           ))}
-          <Button title="Verify identity" onPress={() => navigation.navigate("Kyc")} variant="outline" style={{ marginTop: spacing.sm }} />
+          {eligibility.blockers.some((b) => b.includes("KYC")) ? (
+            <Button title="Complete identity verification" onPress={() => navigation.navigate("Kyc")} variant="outline" style={{ marginTop: spacing.sm }} />
+          ) : null}
         </FintechCard>
       ) : null}
 

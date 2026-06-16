@@ -200,6 +200,10 @@ def review_kyc(
     if data.review_notes:
         profile.kyc_review_notes = data.review_notes
 
+    user = db.query(User).filter(User.id == user_id).first()
+    if new_status == KycStatus.APPROVED and user:
+        user.phone_verified = True
+
     db.query(KycDocument).filter(KycDocument.user_id == user_id).update({
         KycDocument.status: new_status,
         KycDocument.reviewed_by: admin.id,

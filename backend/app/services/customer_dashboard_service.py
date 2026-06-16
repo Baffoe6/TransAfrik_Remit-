@@ -10,6 +10,7 @@ from app.models.referral_program import CustomerReferral
 from app.models.transfer import Transfer
 from app.models.user import User
 from app.services.transfer_status_mapper import to_mvp_status
+from app.services.verification_sync import sync_identity_verification
 from app.utils.phone import format_phone_number
 
 
@@ -46,6 +47,8 @@ def _profile_completion(profile: CustomerProfile | None, user: User | None) -> d
 
 def get_customer_dashboard(db: Session, user_id: int) -> dict:
     user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        sync_identity_verification(db, user)
     profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == user_id).first()
     docs = db.query(KycDocument).filter(KycDocument.user_id == user_id).all()
     beneficiaries = (

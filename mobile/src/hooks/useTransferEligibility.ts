@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { dashboardApi, profileApi } from "../api";
-import { useAuthStore } from "../store/authStore";
+import { useVerificationStatus } from "./useVerificationStatus";
 
 export interface TransferEligibility {
   canTransfer: boolean;
@@ -11,36 +9,20 @@ export interface TransferEligibility {
 }
 
 export function useTransferEligibility(): TransferEligibility & { isLoading: boolean } {
-  const user = useAuthStore((s) => s.user);
-
-  const { data: summary, isLoading: sLoading } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: async () => (await dashboardApi.summary()).data,
-    enabled: !!user,
-  });
-
-  const { data: profile, isLoading: pLoading } = useQuery({
-    queryKey: ["profile"],
-    queryFn: async () => (await profileApi.get()).data,
-    enabled: !!user,
-  });
+  const { kycApproved, kycDisplay, phoneVerified, identityVerified, summary, isLoading } = useVerificationStatus();
 
   const blockers: string[] = [];
-  const phoneVerified = summary?.mobile_identity?.verified ?? user?.phone_verified ?? false;
-  const kycStatus = summary?.kyc?.status ?? profile?.kyc_status ?? "not_submitted";
-  const kycApproved = kycStatus === "Approved" || kycStatus === "approved";
   const profileComplete = summary?.profile_completion?.percent ?? 0;
 
-  if (!phoneVerified) blockers.push("Verify your mobile number");
   if (!kycApproved) blockers.push("Complete identity verification (KYC)");
-  if (profileComplete < 50) blockers.push("Complete your profile details");
+  else if (!identityVerified) blockers.push("Verify your mobile number");
 
   return {
     canTransfer: blockers.length === 0,
     blockers,
-    kycStatus,
+    kycStatus: kycDisplay,
     phoneVerified,
     profileComplete,
-    isLoading: sLoading || pLoading,
+    isLoading,
   };
 }

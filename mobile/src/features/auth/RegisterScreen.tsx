@@ -4,7 +4,6 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AlertBanner, Button, FintechCard, Input, PinInput, Screen } from "../../components";
 import { profileApi } from "../../api/dashboard";
 import { useAuthStore } from "../../store/authStore";
-import { authApi } from "../../api/auth";
 import { COMPLIANCE } from "../../utils/compliance";
 import { normalizePhone } from "../../utils/phone";
 import { isValidDateOfBirth, isValidEmail, isValidMobile, isValidPin } from "../../utils/validation";
@@ -59,12 +58,6 @@ export default function RegisterScreen({ navigation }: Props) {
           /* profile patch is best-effort after register */
         }
       }
-      try {
-        await authApi.sendOtp(normalizePhone(form.mobile_number), "sms", "verify_phone");
-      } catch {
-        /* OTP provider may not be configured — user can resend on verify screen */
-      }
-      navigation.replace("VerifyPhone");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Registration failed");
     } finally {

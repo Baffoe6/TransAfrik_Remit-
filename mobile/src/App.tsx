@@ -11,10 +11,11 @@ import { MainNavigator } from "./navigation/MainNavigator";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAppTheme } from "./theme";
 import { PhoneVerificationGate } from "./features/auth/PhoneVerificationGate";
+import { useVerificationStatus } from "./hooks/useVerificationStatus";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 60_000, retry: 2, refetchOnReconnect: true },
+    queries: { staleTime: 30_000, retry: 2, refetchOnReconnect: true, refetchOnWindowFocus: true },
   },
 });
 
@@ -25,12 +26,17 @@ function RootNav() {
   const onboardingComplete = useOnboardingStore((s) => s.complete);
   const loadOnboarding = useOnboardingStore((s) => s.load);
   const loadSettings = useSettingsStore((s) => s.load);
+  const { identityVerified, isLoading: verificationLoading, sync } = useVerificationStatus();
 
   useEffect(() => {
     bootstrap();
     loadOnboarding();
     loadSettings();
   }, [bootstrap, loadOnboarding, loadSettings]);
+
+  useEffect(() => {
+    if (user) void sync();
+  }, [user?.id, user?.phone_verified]);
 
   if (!initialized || onboardingComplete === null) {
     return (
@@ -43,8 +49,7 @@ function RootNav() {
   const navTheme = scheme === "dark" ? DarkTheme : DefaultTheme;
   navTheme.colors.primary = theme.primary;
 
-  const needsPhoneVerify = user && !user.phone_verified;
-
+  const needsPhoneVerify = user && !verificationLoading && !identityVerified;
   return (
     <NavigationContainer theme={navTheme}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />

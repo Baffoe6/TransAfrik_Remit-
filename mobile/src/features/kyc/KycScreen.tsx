@@ -3,11 +3,13 @@ import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 import { Image, Text, View } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";import { Ionicons } from "@expo/vector-icons";
 import { AlertBanner, Button, FintechCard, ProgressBar, Screen, StatusPill } from "../../components";
 import { kycApi, profileApi } from "../../api";
 import { KYC_DOC_TYPES, COMPLIANCE } from "../../utils/compliance";
 import { KYC_WORKFLOW_STATES } from "../../utils/constants";
+import { useVerificationStatus } from "../../hooks/useVerificationStatus";
 import { spacing, useAppTheme, radius } from "../../theme";
 import { typography } from "../../theme/typography";
 
@@ -26,6 +28,7 @@ function workflowLabel(status: string) {
 export default function KycScreen() {
   const theme = useAppTheme();
   const qc = useQueryClient();
+  const { kycRaw, kycApproved, sync } = useVerificationStatus();
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -33,9 +36,16 @@ export default function KycScreen() {
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: async () => (await profileApi.get()).data });
   const { data: docs = [], refetch } = useQuery({ queryKey: ["kyc-docs"], queryFn: async () => (await kycApi.documents()).data });
 
+  useFocusEffect(
+    useCallback(() => {
+      void sync();
+      void refetch();
+    }, [sync, refetch]),
+  );
+
   const uploadedTypes = new Set(docs.map((d) => d.document_type));
   const progress = Math.round((DOCS.filter((d) => uploadedTypes.has(d.type)).length / DOCS.length) * 100);
-  const kycStatus = profile?.kyc_status ?? "draft";
+  const kycStatus = kycApproved ? "approved" : (profile?.kyc_status ?? kycRaw ?? "draft");
 
   const upload = async (documentType: string, useCamera: boolean, ocr = false) => {
     setUploading(true);
@@ -56,6 +66,7 @@ export default function KycScreen() {
         await postUpload(documentType, result.assets[0].uri, result.assets[0].fileName ?? "doc.jpg");
       }
       await refetch();
+      await sync();
       await qc.invalidateQueries({ queryKey: ["dashboard"] });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
@@ -80,6 +91,15 @@ export default function KycScreen() {
 
       {profile?.kyc_rejection_reason && <AlertBanner type="error" message={`Rejected: ${profile.kyc_rejection_reason}`} />}
       {error ? <AlertBanner type={error.includes("OCR") ? "info" : "error"} message={error} /> : null}
+
+      {kycApproved && (
+        <FintechCard variant="muted">
+          <Text style={[typography.h3, { color: theme.text }]}>Verification approved</Text>
+          <Text style={[typography.body, { color: theme.textSecondary, marginTop: spacing.sm }]}>
+            Your identity has been verified. You can send money now.
+          </Text>
+        </FintechCard>
+      )}
 
       <FintechCard variant="hero">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
@@ -115,6 +135,7 @@ export default function KycScreen() {
       )}
 
       {DOCS.map((doc) => {
+        if (kycApproved) return null;
         const uploaded = docs.find((d) => d.document_type === doc.type);
         const done = !!uploaded;
         return (

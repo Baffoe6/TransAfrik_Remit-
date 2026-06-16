@@ -34,6 +34,7 @@ import { spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import type { DashboardSummary, Transfer } from "../../types";
 import { RootStackParamList } from "../../navigation/MainNavigator";
+import { useVerificationStatus } from "../../hooks/useVerificationStatus";
 import { CORRIDORS } from "../../utils/constants";
 import { hapticLight } from "../../services/haptics";
 
@@ -84,8 +85,13 @@ export default function HomeScreen() {
     },
   });
 
-  const kycStatus = summary?.kyc.status ?? "Draft";
-  const kycVariant = kycStatus === "Approved" ? "success" : kycStatus === "Rejected" ? "error" : "warning";
+  const { kycDisplay, kycApproved, sync } = useVerificationStatus();
+  const kycVariant = kycDisplay === "Approved" ? "success" : kycDisplay === "Rejected" ? "error" : "warning";
+
+  useEffect(() => {
+    if (user) void sync();
+  }, [user?.id]);
+
   const corridor = CORRIDORS.find((c) => c.code === calc.corridorCode);
 
   const activeTransfer = useMemo(
@@ -104,7 +110,7 @@ export default function HomeScreen() {
   const quickActions = [
     { id: "send", label: "Send", icon: "arrow-up-circle" as const, onPress: startSend, accent: true },
     { id: "beneficiaries", label: "Recipients", icon: "people" as const, onPress: () => navigation.navigate("Tabs", { screen: "Beneficiaries" } as never) },
-    { id: "kyc", label: "Verify", icon: "shield-checkmark" as const, onPress: () => navigation.navigate("Kyc") },
+    { id: "kyc", label: kycApproved ? "Verified" : "Verify", icon: "shield-checkmark" as const, onPress: () => navigation.navigate("Kyc") },
     { id: "activity", label: "Activity", icon: "time" as const, onPress: () => navigation.navigate("Tabs", { screen: "Activity" } as never) },
     { id: "support", label: "Help", icon: "chatbubble-ellipses" as const, onPress: () => navigation.navigate("Support") },
   ];
@@ -113,7 +119,7 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       {offline && <OfflineBanner />}
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={theme.primary} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={() => { void refetch(); void sync(); }} tintColor={theme.primary} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
       >
@@ -176,21 +182,34 @@ export default function HomeScreen() {
 
               <RateAlertWidget />
 
-              <FintechCard variant={kycStatus === "Approved" ? "muted" : "accent"}>
+              {!kycApproved ? (
+              <FintechCard variant="accent">
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                     <Ionicons name="shield-checkmark" size={22} color={theme.primary} />
                     <Text style={[typography.bodyBold, { color: theme.text }]}>Identity verification</Text>
                   </View>
-                  <StatusPill label={kycStatus} variant={kycVariant as "success"} />
+                  <StatusPill label={kycDisplay} variant={kycVariant as "success"} />
                 </View>
                 <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 8 }]}>
                   {summary?.profile_completion.percent ?? 0}% complete · {summary?.kyc.documents_uploaded ?? 0} documents
                 </Text>
-                {kycStatus !== "Approved" && (
-                  <Button title="Complete verification" onPress={() => navigation.navigate("Kyc")} variant="primary" style={{ marginTop: spacing.md }} />
-                )}
+                <Button title="Complete verification" onPress={() => navigation.navigate("Kyc")} variant="primary" style={{ marginTop: spacing.md }} />
               </FintechCard>
+              ) : (
+              <FintechCard variant="muted">
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                    <Ionicons name="checkmark-circle" size={22} color={theme.success} />
+                    <Text style={[typography.bodyBold, { color: theme.text }]}>Identity verified</Text>
+                  </View>
+                  <StatusPill label="Approved" variant="success" />
+                </View>
+                <Text style={[typography.caption, { color: theme.textSecondary, marginTop: 8 }]}>
+                  You are cleared to send money.
+                </Text>
+              </FintechCard>
+              )}
 
               <TouchableOpacity onPress={() => navigation.navigate("Referral")} activeOpacity={0.85}>
                 <FintechCard variant="muted">

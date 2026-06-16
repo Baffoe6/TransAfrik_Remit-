@@ -300,6 +300,7 @@ def register(request: Request, data: RegisterRequest, db: Annotated[Session, Dep
         password_hash=hash_password(data.password) if data.password else None,
         role=UserRole.CUSTOMER,
         status="active",
+        phone_verified=bool(data.pin),
     )
     if not user.pin_hash and not user.password_hash:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="PIN or password is required")
@@ -752,7 +753,13 @@ def logout(
 
 
 @router.get("/me", response_model=UserResponse)
-def get_me(current_user: Annotated[User, Depends(get_current_user)]):
+def get_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    from app.services.verification_sync import sync_identity_verification
+
+    sync_identity_verification(db, current_user)
     return _user_response(current_user)
 
 

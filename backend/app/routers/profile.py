@@ -8,12 +8,14 @@ from app.dependencies import get_current_user
 from app.models.customer_profile import CustomerProfile
 from app.models.user import User
 from app.schemas.profile import ProfileResponse, ProfileUpdate
+from app.services.verification_sync import sync_identity_verification
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
 @router.get("", response_model=ProfileResponse)
 def get_profile(current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session, Depends(get_db)]):
+    sync_identity_verification(db, current_user)
     profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
