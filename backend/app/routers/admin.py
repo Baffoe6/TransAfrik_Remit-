@@ -57,7 +57,7 @@ from app.utils.file_storage import ensure_upload_dir
 router = APIRouter(prefix="/admin", tags=["Admin"])
 settings = get_settings()
 
-AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.COMPLIANCE_OFFICER))]
+AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.COMPLIANCE_OFFICER, UserRole.FOUNDER))]
 
 
 @router.get("/dashboard", response_model=DashboardStats)
@@ -160,6 +160,7 @@ def pending_kyc(admin: AdminUser, db: Annotated[Session, Depends(get_db)]):
         {
             "user_id": p.user_id,
             "email": p.user.email,
+            "mobile_number": p.user.mobile_number,
             "first_name": p.first_name,
             "last_name": p.last_name,
             "kyc_status": p.kyc_status.value,

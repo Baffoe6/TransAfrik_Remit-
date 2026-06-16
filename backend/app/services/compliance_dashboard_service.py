@@ -70,6 +70,7 @@ def get_compliance_dashboard(db: Session) -> dict:
             {
                 "user_id": p.user_id,
                 "email": u.email,
+                "mobile_number": u.mobile_number,
                 "name": f"{p.first_name} {p.last_name}",
                 "kyc_status": p.kyc_status.value if hasattr(p.kyc_status, "value") else p.kyc_status,
             }

@@ -11,7 +11,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 type ComplianceDashboard = {
   kyc_queue_count: number;
-  kyc_queue: { user_id: number; email: string; name: string; kyc_status: string }[];
+  kyc_queue: { user_id: number; email: string; name: string; kyc_status: string; mobile_number?: string | null }[];
   high_risk_customers: number;
   high_risk_transactions: number;
   edd_open_cases: number;
@@ -23,12 +23,26 @@ export default function ComplianceDashboardPage() {
   const [metrics, setMetrics] = useState<ComplianceDashboard | null>(null);
   const [queue, setQueue] = useState<ComplianceQueueItem[]>([]);
 
+  const [error, setError] = useState("");
+
   const load = () => {
-    api<ComplianceDashboard>("/admin/compliance/dashboard").then(setMetrics).catch(() => {});
+    setError("");
+    api<ComplianceDashboard>("/admin/compliance/dashboard").then(setMetrics).catch((e) => setError(e instanceof Error ? e.message : "Failed to load dashboard"));
     api<ComplianceQueueItem[]>("/admin/compliance/queue").then(setQueue).catch(() => {});
   };
 
   useEffect(() => { load(); }, []);
+
+  const reviewKyc = async (userId: number, status: "approved" | "rejected") => {
+    if (status === "rejected") {
+      const reason = prompt("Rejection reason:");
+      if (!reason) return;
+      await api(`/admin/kyc/${userId}/review`, { method: "POST", body: JSON.stringify({ status, rejection_reason: reason }) });
+    } else {
+      await api(`/admin/kyc/${userId}/review`, { method: "POST", body: JSON.stringify({ status }) });
+    }
+    load();
+  };
 
   const approve = async (id: number) => {
     await api(`/admin/compliance/transfers/${id}/approve`, { method: "POST" });
@@ -52,6 +66,8 @@ export default function ComplianceDashboardPage() {
           <Button variant="outline">Export CSV</Button>
         </a>
       </div>
+
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -91,12 +107,16 @@ export default function ComplianceDashboardPage() {
           ) : (
             <div className="space-y-2">
               {metrics?.kyc_queue.map((item) => (
-                <div key={item.user_id} className="flex items-center justify-between rounded border p-3 text-sm">
+                <div key={item.user_id} className="flex items-center justify-between gap-3 rounded border p-3 text-sm">
                   <div>
                     <p className="font-medium">{item.name}</p>
-                    <p className="text-gray-500">{item.email}</p>
+                    <p className="text-gray-500">{item.mobile_number || item.email}</p>
                   </div>
-                  <Badge variant="warning">{item.kyc_status}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="warning">{item.kyc_status}</Badge>
+                    <Button size="sm" onClick={() => reviewKyc(item.user_id, "approved")}>Approve</Button>
+                    <Button size="sm" variant="destructive" onClick={() => reviewKyc(item.user_id, "rejected")}>Reject</Button>
+                  </div>
                 </div>
               ))}
             </div>

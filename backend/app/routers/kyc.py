@@ -51,6 +51,13 @@ async def upload_document(
     profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == current_user.id).first()
     if profile and profile.kyc_status in (KycStatus.NOT_SUBMITTED, KycStatus.REJECTED):
         profile.kyc_status = KycStatus.PENDING
+    elif profile and profile.kyc_status != KycStatus.APPROVED:
+        user_docs = db.query(KycDocument).filter(KycDocument.user_id == current_user.id).all()
+        uploaded_types = {d.document_type for d in user_docs}
+        uploaded_types.add(doc_type)
+        required = {KycDocumentType.ID_PASSPORT, KycDocumentType.PROOF_OF_ADDRESS, KycDocumentType.SELFIE}
+        if required.issubset(uploaded_types):
+            profile.kyc_status = KycStatus.PENDING
 
     db.commit()
     db.refresh(doc)
