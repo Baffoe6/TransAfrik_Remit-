@@ -21,8 +21,12 @@ def send_verification(mobile: str, channel: str = "sms") -> dict:
         return {"provider": "console", "sent": False, "fallback": True}
 
     try:
-        from twilio.rest import Client
+        from twilio.rest import Client  # noqa: PLC0415
+    except ModuleNotFoundError:
+        logger.error("twilio package not installed — add 'twilio>=9.0.0' to requirements.txt")
+        return {"provider": "console", "sent": False, "fallback": True, "error": "twilio_not_installed"}
 
+    try:
         client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
         verification = client.verify.v2.services(settings.twilio_verify_service_sid).verifications.create(
             to=mobile,
