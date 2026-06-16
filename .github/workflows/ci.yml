@@ -35,6 +35,7 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: postgresql://transafrik:transafrik_secret@localhost:5432/transafrik
+          SEED_DEMO_DATA: "false"
         run: |
           alembic upgrade head
           python -m app.seed
@@ -42,6 +43,7 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: postgresql://transafrik:transafrik_secret@localhost:5432/transafrik
+          SEED_DEMO_DATA: "false"
         run: pytest tests/ -v
 
   frontend:

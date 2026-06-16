@@ -68,23 +68,42 @@ def test_pin_reset_confirm():
 def test_pin_register_and_login_integration():
     import secrets
 
+    from app.database import SessionLocal
     from app.main import app
+    from app.models.enums import PilotInviteStatus
+    from app.models.pilot import PilotInvite
+    from app.services.pilot_service import get_pilot_settings
     from fastapi.testclient import TestClient
 
     client = TestClient(app)
     mobile = "+2782" + "".join(secrets.choice("0123456789") for _ in range(7))
 
-    reg = client.post(
-        "/api/v1/auth/register",
-        json={
-            "mobile_number": mobile,
-            "first_name": "Pin",
-            "last_name": "Test",
-            "pin": "4321",
-            "accept_popia": True,
-            "accept_terms": True,
-        },
-    )
+    payload = {
+        "mobile_number": mobile,
+        "first_name": "Pin",
+        "last_name": "Test",
+        "pin": "4321",
+        "accept_popia": True,
+        "accept_terms": True,
+    }
+
+    db = SessionLocal()
+    try:
+        pilot = get_pilot_settings(db)
+        if pilot.pilot_mode_enabled and pilot.invite_only_registration:
+            invite = (
+                db.query(PilotInvite)
+                .filter(PilotInvite.status == PilotInviteStatus.ACTIVE)
+                .order_by(PilotInvite.id.desc())
+                .first()
+            )
+            if not invite:
+                pytest.skip("Pilot invite-only registration enabled but no invite seeded")
+            payload["invite_code"] = invite.invite_code
+    finally:
+        db.close()
+
+    reg = client.post("/api/v1/auth/register", json=payload)
     assert reg.status_code == 201, reg.text
     assert reg.json().get("access_token")
 
