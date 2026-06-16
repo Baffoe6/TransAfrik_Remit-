@@ -14,6 +14,12 @@ def test_hash_pin_never_stores_plaintext():
     assert not verify_pin("0000", hashed)
 
 
+def test_refresh_tokens_are_unique_per_call():
+    from app.utils.security import create_refresh_token
+
+    assert create_refresh_token(1) != create_refresh_token(1)
+
+
 def test_register_request_requires_pin_and_consents():
     req = RegisterRequest(
         mobile_number="+27821234567",
