@@ -63,8 +63,8 @@ def upgrade() -> None:
         op.execute(
             sa.text(
                 """
-                INSERT INTO fx_markup_rules (from_currency, to_currency, markup_type, markup_value, priority, is_active, created_at, updated_at)
-                SELECT :src, :dst, 'percentage', :pct, 0, true, NOW(), NOW()
+                INSERT INTO fx_markup_rules (from_currency, to_currency, markup_type, markup_value, priority, is_active)
+                SELECT :src, :dst, 'percentage', :pct, 0, true
                 WHERE NOT EXISTS (
                     SELECT 1 FROM fx_markup_rules
                     WHERE from_currency = :src AND to_currency = :dst AND is_active = true
@@ -76,9 +76,9 @@ def upgrade() -> None:
     op.execute(
         sa.text(
             """
-            INSERT INTO payment_methods (name, code, provider, provider_class, description, requires_proof_upload, is_instant, is_active, created_at, updated_at)
+            INSERT INTO payment_methods (name, code, provider, provider_class, description, requires_proof_upload, is_instant, is_active)
             SELECT 'Flutterwave Checkout', 'flutterwave', 'flutterwave', 'flutterwave',
-                   'Card, bank transfer, Capitec Pay, 1Voucher via Flutterwave', false, true, true, NOW(), NOW()
+                   'Card, bank transfer, Capitec Pay, 1Voucher via Flutterwave', false, true, true
             WHERE NOT EXISTS (SELECT 1 FROM payment_methods WHERE code = 'flutterwave')
             """
         )
@@ -86,9 +86,9 @@ def upgrade() -> None:
     op.execute(
         sa.text(
             """
-            INSERT INTO payment_methods (name, code, provider, provider_class, description, requires_proof_upload, is_instant, is_active, created_at, updated_at)
+            INSERT INTO payment_methods (name, code, provider, provider_class, description, requires_proof_upload, is_instant, is_active)
             SELECT 'Card Payment', 'card', 'flutterwave', 'card',
-                   'Debit/credit card via Flutterwave', false, true, true, NOW(), NOW()
+                   'Debit/credit card via Flutterwave', false, true, true
             WHERE NOT EXISTS (SELECT 1 FROM payment_methods WHERE code = 'card')
             """
         )
