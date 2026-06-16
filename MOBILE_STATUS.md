@@ -92,10 +92,10 @@ mobile/src/
 | **Profile** | `preview` |
 | **App version** | `2.0.0` |
 | **Build number** | `1` |
-| **Git commit (target)** | `d7d699e` — production-ready remittance app |
-| **Build ID** | `55c859d5-0bc0-4116-b106-bb6b3bee933c` |
-| **APK download** | [Direct APK](https://expo.dev/artifacts/eas/cMCa2poSIlZFa7esphL7PLj9nViEqbjU79RXTnsoKL4.apk) |
-| **QR install** | [EAS build page](https://expo.dev/accounts/baffoe6/projects/transafrik-remit/builds/55c859d5-0bc0-4116-b106-bb6b3bee933c) |
+| **Git commit** | `d7d699e` — production-ready remittance app |
+| **Build ID** | `38d52673-14f6-4dc8-8a01-fc4be597f9c1` |
+| **APK download** | [Direct APK](https://expo.dev/artifacts/eas/bkAGtGP7kf7w1NAkOm3OTZ5Ny3VupMCAyNrPL12_fNM.apk) |
+| **QR install** | [EAS build page](https://expo.dev/accounts/baffoe6/projects/transafrik-remit/builds/38d52673-14f6-4dc8-8a01-fc4be597f9c1) |
 
 **QA:** [MOBILE_QA_TEST_PLAN.md](MOBILE_QA_TEST_PLAN.md) · [PILOT_CUSTOMER_TEST_GUIDE.md](PILOT_CUSTOMER_TEST_GUIDE.md)
 
