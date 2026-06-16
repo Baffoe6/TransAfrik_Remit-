@@ -29,4 +29,4 @@ export const SUPPORT_CATEGORIES = [
   { value: "general", label: "General enquiry" },
 ] as const;
 
-export const FLUTTERWAVE_METHOD_CODES = new Set(["flutterwave", "payfast", "card"]);
+export const FLUTTERWAVE_METHOD_CODES = new Set(["flutterwave"]);

@@ -26,12 +26,18 @@ from app.utils.voucher_pdf import generate_voucher_pdf
 router = APIRouter(prefix="/payments", tags=["Payments"])
 settings = get_settings()
 
+# Customer checkout is Flutterwave only (card, bank transfer, Capitec Pay, 1Voucher, etc.).
+FLUTTERWAVE_CHECKOUT_CODES = ("flutterwave",)
+
 
 @router.get("/methods", response_model=list[PaymentMethodResponse])
 def list_payment_methods(db: Annotated[Session, Depends(get_db)]):
     return (
         db.query(PaymentMethod)
-        .filter(PaymentMethod.is_active.is_(True))
+        .filter(
+            PaymentMethod.is_active.is_(True),
+            PaymentMethod.code.in_(FLUTTERWAVE_CHECKOUT_CODES),
+        )
         .order_by(PaymentMethod.id.asc())
         .all()
     )

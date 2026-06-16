@@ -21,9 +21,9 @@ export function GeneratePaymentForm({
 
   useEffect(() => {
     api<PaymentMethod[]>("/payments/methods").then((m) => {
-      const active = m.filter((x) => x.is_active && !x.is_instant);
-      setMethods(active);
-      if (active.length) setCode(active[0].code);
+      const flutterwave = m.filter((x) => x.is_active && x.code === "flutterwave");
+      setMethods(flutterwave);
+      if (flutterwave.length) setCode(flutterwave[0].code);
     });
   }, []);
 

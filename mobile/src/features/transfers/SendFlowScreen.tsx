@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -79,8 +79,19 @@ export default function SendFlowScreen({ navigation }: Props) {
   const { data: methods = [] } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: async () => (await paymentsApi.methods()).data,
-    enabled: flow.step >= 4,
+    enabled: flow.step >= 3,
   });
+
+  const flutterwaveMethods = useMemo(
+    () => methods.filter((m) => FLUTTERWAVE_METHOD_CODES.has(m.code.toLowerCase())),
+    [methods],
+  );
+
+  useEffect(() => {
+    if (flow.step >= 4 && flutterwaveMethods.length === 1 && !flow.paymentMethod) {
+      flow.setPaymentMethod(flutterwaveMethods[0]);
+    }
+  }, [flow.step, flutterwaveMethods, flow.paymentMethod, flow]);
 
   const { data: liveQuote } = useLiveQuote(flow.amount, flow.destinationCountry, flow.step === 2 || flow.step === 5);
 
@@ -114,13 +125,7 @@ export default function SendFlowScreen({ navigation }: Props) {
       });
       flow.setTransferId(data.id);
       hapticSuccess();
-      const code = flow.paymentMethod.code.toLowerCase();
-      if (FLUTTERWAVE_METHOD_CODES.has(code)) {
-        navigation.replace("FlutterwavePayment", { transferId: data.id });
-        return;
-      }
-      const { data: ref } = await paymentsApi.generate(data.id, flow.paymentMethod.code);
-      navigation.replace("PaymentSuccess", { transferId: data.id, reference: ref });
+      navigation.replace("FlutterwavePayment", { transferId: data.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Transfer failed");
     } finally {
@@ -233,17 +238,25 @@ export default function SendFlowScreen({ navigation }: Props) {
 
       {flow.step === 4 && (
         <>
-          {methods.map((m) => (
+          <Text style={[typography.body, { color: theme.textSecondary, marginBottom: spacing.md }]}>
+            Pay securely via Flutterwave — card, bank transfer, Capitec Pay, 1Voucher and more.
+          </Text>
+          {flutterwaveMethods.map((m) => (
             <SelectableRow key={m.id} selected={flow.paymentMethod?.id === m.id} onPress={() => flow.setPaymentMethod(m)}>
               <View style={{ width: 44, height: 44, borderRadius: radius.md, backgroundColor: theme.primaryMuted, alignItems: "center", justifyContent: "center", marginRight: spacing.md }}>
                 <Ionicons name="card" size={22} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={typography.bodyBold}>{m.name}</Text>
-                <Text style={[typography.caption, { color: theme.textSecondary }]}>{m.description ?? m.provider}</Text>
+                <Text style={[typography.caption, { color: theme.textSecondary }]}>
+                  {m.description ?? "Card, EFT, Capitec Pay, 1Voucher via Flutterwave"}
+                </Text>
               </View>
             </SelectableRow>
           ))}
+          {flutterwaveMethods.length === 0 && (
+            <Text style={{ color: theme.textSecondary }}>Flutterwave checkout is temporarily unavailable. Please try again later.</Text>
+          )}
         </>
       )}
 

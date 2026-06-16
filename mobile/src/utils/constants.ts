@@ -84,7 +84,7 @@ export const PAYOUT_PARTNERS = [
 
 export const FAQ_ITEMS = [
   { q: "How long do transfers take?", a: "Most mobile money transfers arrive same day. Bank and cash pickup may take 1–2 business days." },
-  { q: "What payment methods are supported?", a: "Pay@, EasyPay, EFT, and card payments via our partners." },
+  { q: "What payment methods are supported?", a: "Card, bank transfer, Capitec Pay, 1Voucher and more via Flutterwave Checkout." },
   { q: "Is my money safe?", a: "TransAfrik uses secure customer verification and approved payment and remittance partners. We do not hold your funds directly." },
   { q: "How do I complete KYC?", a: "Upload your ID or passport, proof of address, and a selfie from the KYC section in your profile." },
 ];

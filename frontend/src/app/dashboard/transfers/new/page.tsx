@@ -29,9 +29,9 @@ export default function NewTransferPage() {
       if (active.length) setBeneficiaryId(String(active[0].id));
     });
     api<PaymentMethod[]>("/payments/methods").then((m) => {
-      const active = m.filter((x) => x.is_active && !x.is_instant);
-      setPaymentMethods(active);
-      if (active.length) setPaymentMethodCode(active[0].code);
+      const flutterwave = m.filter((x) => x.is_active && x.code === "flutterwave");
+      setPaymentMethods(flutterwave);
+      if (flutterwave.length) setPaymentMethodCode(flutterwave[0].code);
     });
   }, []);
 
