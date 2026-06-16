@@ -229,8 +229,10 @@ Interactive docs at `/docs` (Swagger) and `/redoc` when the backend is running.
 Base path: `/api/v1`
 
 Key endpoints:
-- `POST /api/v1/auth/register` — customer registration
-- `POST /api/v1/auth/login` — login
+- `POST /api/v1/auth/register` — mobile + PIN registration (email optional)
+- `POST /api/v1/auth/login/pin` — primary customer login (mobile + PIN)
+- `POST /api/v1/auth/login` — legacy email + password (staff / migrated users)
+- `POST /api/v1/auth/pin/reset` — OTP PIN reset
 - `POST /api/v1/transfers/calculate` — fee/FX calculator
 - `POST /api/v1/transfers` — create transfer
 - `GET /api/v1/admin/dashboard` — admin stats

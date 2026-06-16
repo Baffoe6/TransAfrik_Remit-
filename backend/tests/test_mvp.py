@@ -60,7 +60,7 @@ def test_waitlist_join_integration():
 )
 def test_dashboard_summary_integration():
     login = client.post("/api/v1/auth/login", json={
-        "email": os.environ.get("SEED_CUSTOMER_EMAIL", "customer@demo.co.za"),
+        "identifier": os.environ.get("SEED_CUSTOMER_EMAIL", "customer@demo.co.za"),
         "password": os.environ.get("SEED_CUSTOMER_PASSWORD", "Customer@TransAfrik2024!"),
     })
     if login.status_code != 200:

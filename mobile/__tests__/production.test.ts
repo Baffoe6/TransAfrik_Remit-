@@ -1,8 +1,14 @@
-import { isValidPassword, isValidGhanaMobile, isValidDateOfBirth } from "../src/utils/validation";
+import { isValidPassword, isValidPin, isValidGhanaMobile, isValidDateOfBirth } from "../src/utils/validation";
 import { FLUTTERWAVE_METHOD_CODES } from "../src/utils/compliance";
 
 describe("production validation", () => {
-  it("requires 8+ char passwords", () => {
+  it("validates 4-digit PINs", () => {
+    expect(isValidPin("1234")).toBe(true);
+    expect(isValidPin("12")).toBe(false);
+    expect(isValidPin("abcd")).toBe(false);
+  });
+
+  it("requires 8+ char passwords for legacy email login", () => {
     expect(isValidPassword("short")).toBe(false);
     expect(isValidPassword("secure123")).toBe(true);
   });

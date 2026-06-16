@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_sms_from: str = ""
     twilio_whatsapp_from: str = ""
+    twilio_verify_service_sid: str = ""
+    otp_provider: str = "console"  # console | twilio_verify
     africas_talking_api_key: str = ""
     africas_talking_username: str = ""
     africas_talking_sender_id: str = "TransAfrik"

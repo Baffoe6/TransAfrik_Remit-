@@ -34,7 +34,7 @@ def test_disclaimer():
 def test_login_and_calculate_integration():
     """Run against a seeded PostgreSQL instance (e.g. docker compose up)."""
     login = client.post("/api/v1/auth/login", json={
-        "email": os.environ.get("SEED_CUSTOMER_EMAIL", "customer@demo.co.za"),
+        "identifier": os.environ.get("SEED_CUSTOMER_EMAIL", "customer@demo.co.za"),
         "password": os.environ.get("SEED_CUSTOMER_PASSWORD", "Customer@TransAfrik2024!"),
     })
     if login.status_code != 200:

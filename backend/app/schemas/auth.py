@@ -1,20 +1,66 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.utils.phone import is_email_identifier, validate_phone_number
+
+PIN_PATTERN = re.compile(r"^\d{4,6}$")
+
+
+def _validate_pin(v: str) -> str:
+    v = v.strip()
+    if not PIN_PATTERN.match(v):
+        raise ValueError("PIN must be 4–6 digits")
+    return v
 
 
 class RegisterRequest(BaseModel):
     mobile_number: str = Field(min_length=8, max_length=30)
-    password: str = Field(min_length=8, max_length=128)
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
+    pin: str = Field(min_length=4, max_length=6)
     email: EmailStr | None = None
     invite_code: str | None = Field(default=None, max_length=32)
+    referral_code: str | None = Field(default=None, max_length=32)
+    accept_popia: bool
+    accept_terms: bool
+    # Legacy — existing API clients may still send password during migration
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
     @field_validator("mobile_number")
     @classmethod
     def normalize_mobile(cls, v: str) -> str:
         return validate_phone_number(v)
+
+    @field_validator("pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        return _validate_pin(v)
+
+    @model_validator(mode="after")
+    def require_consents(self):
+        if not self.accept_popia:
+            raise ValueError("POPIA consent is required")
+        if not self.accept_terms:
+            raise ValueError("Terms and conditions consent is required")
+        return self
+
+
+class PinLoginRequest(BaseModel):
+    mobile_number: str = Field(min_length=8, max_length=30)
+    pin: str = Field(min_length=4, max_length=6)
+    device_id: str | None = Field(default=None, max_length=64)
+    device_label: str | None = Field(default=None, max_length=100)
+
+    @field_validator("mobile_number")
+    @classmethod
+    def normalize_mobile(cls, v: str) -> str:
+        return validate_phone_number(v)
+
+    @field_validator("pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        return _validate_pin(v)
 
 
 class LoginRequest(BaseModel):
@@ -32,7 +78,9 @@ class LoginRequest(BaseModel):
 class OtpSendRequest(BaseModel):
     mobile_number: str = Field(min_length=8, max_length=30)
     channel: str = Field(description="sms or whatsapp")
-    purpose: str = Field(description="login, verify_phone, or step_up")
+    purpose: str = Field(
+        description="login, verify_phone, step_up, pin_reset, beneficiary_change, high_value_transfer, kyc_update"
+    )
 
     @field_validator("mobile_number")
     @classmethod
@@ -80,7 +128,25 @@ class PasswordResetRequest(BaseModel):
         return validate_phone_number(v)
 
 
+class PinResetConfirm(BaseModel):
+    mobile_number: str = Field(min_length=8, max_length=30)
+    code: str = Field(min_length=4, max_length=8)
+    new_pin: str = Field(min_length=4, max_length=6)
+
+    @field_validator("mobile_number")
+    @classmethod
+    def normalize_mobile(cls, v: str) -> str:
+        return validate_phone_number(v)
+
+    @field_validator("new_pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        return _validate_pin(v)
+
+
 class PasswordResetConfirm(BaseModel):
+    """Legacy password reset — prefer PinResetConfirm for customers."""
+
     mobile_number: str = Field(min_length=8, max_length=30)
     code: str = Field(min_length=4, max_length=8)
     new_password: str = Field(min_length=8, max_length=128)
@@ -89,6 +155,18 @@ class PasswordResetConfirm(BaseModel):
     @classmethod
     def normalize_mobile(cls, v: str) -> str:
         return validate_phone_number(v)
+
+
+class SetPinRequest(BaseModel):
+    """Optional PIN setup for legacy email/password customers."""
+
+    pin: str = Field(min_length=4, max_length=6)
+    current_password: str | None = None
+
+    @field_validator("pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        return _validate_pin(v)
 
 
 class DeviceTrustRequest(BaseModel):
@@ -107,6 +185,7 @@ class TokenResponse(BaseModel):
     risk_level: str | None = None
     mfa_setup_required: bool = False
     password_change_required: bool = False
+    phone_verification_required: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -127,5 +206,6 @@ class UserResponse(BaseModel):
     status: str = "active"
     email_verified: bool
     phone_verified: bool
+    has_pin: bool = False
 
     model_config = {"from_attributes": True}

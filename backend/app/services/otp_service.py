@@ -18,9 +18,22 @@ OTP_PURPOSE_LOGIN = "login"
 OTP_PURPOSE_VERIFY_PHONE = "verify_phone"
 OTP_PURPOSE_STEP_UP = "step_up"
 OTP_PURPOSE_PASSWORD_RESET = "password_reset"
+OTP_PURPOSE_PIN_RESET = "pin_reset"
+OTP_PURPOSE_BENEFICIARY_CHANGE = "beneficiary_change"
+OTP_PURPOSE_HIGH_VALUE_TRANSFER = "high_value_transfer"
+OTP_PURPOSE_KYC_UPDATE = "kyc_update"
 
 VALID_CHANNELS = ("sms", "whatsapp")
-VALID_PURPOSES = (OTP_PURPOSE_LOGIN, OTP_PURPOSE_VERIFY_PHONE, OTP_PURPOSE_STEP_UP, OTP_PURPOSE_PASSWORD_RESET)
+VALID_PURPOSES = (
+    OTP_PURPOSE_LOGIN,
+    OTP_PURPOSE_VERIFY_PHONE,
+    OTP_PURPOSE_STEP_UP,
+    OTP_PURPOSE_PASSWORD_RESET,
+    OTP_PURPOSE_PIN_RESET,
+    OTP_PURPOSE_BENEFICIARY_CHANGE,
+    OTP_PURPOSE_HIGH_VALUE_TRANSFER,
+    OTP_PURPOSE_KYC_UPDATE,
+)
 
 
 def generate_otp_code(length: int = 6) -> str:
@@ -30,6 +43,8 @@ def generate_otp_code(length: int = 6) -> str:
 def _otp_message(code: str, purpose: str) -> str:
     if purpose == OTP_PURPOSE_VERIFY_PHONE:
         return f"Your TransAfrik Remit verification code is {code}. Valid for 10 minutes. Do not share this code."
+    if purpose == OTP_PURPOSE_PIN_RESET:
+        return f"Your TransAfrik Remit PIN reset code is {code}. Valid for 10 minutes. Do not share this code."
     return f"Your TransAfrik Remit login code is {code}. Valid for 10 minutes. Do not share this code."
 
 
@@ -52,11 +67,32 @@ def send_otp(
             detail="Too many OTP requests. Try again later.",
         )
 
+    settings = get_settings()
+    if settings.otp_provider == "twilio_verify":
+        from app.services.twilio_verify_service import send_verification
+
+        twilio_result = send_verification(normalized, channel)
+        if twilio_result.get("sent"):
+            logger.info(
+                "Twilio Verify OTP purpose=%s channel=%s mobile=%s",
+                purpose,
+                channel,
+                normalized[-4:],
+            )
+            return {
+                "sent": True,
+                "channel": channel,
+                "purpose": purpose,
+                "mobile_number": normalized,
+                "provider": "twilio_verify",
+                "expires_in_seconds": 600,
+                "message": f"Verification code sent via {channel.upper()}",
+            }
+
     code = generate_otp_code()
     store_otp(purpose, normalized, code, metadata={"channel": channel, "user_id": user_id})
 
     message = _otp_message(code, purpose)
-    settings = get_settings()
 
     if channel == "sms":
         provider = get_sms_provider(settings.sms_provider)
@@ -86,6 +122,13 @@ def send_otp(
 
 def verify_otp_code(mobile: str, purpose: str, code: str) -> str:
     normalized = validate_phone_number(mobile)
+    settings = get_settings()
+    if settings.otp_provider == "twilio_verify":
+        from app.services.twilio_verify_service import check_verification
+
+        if check_verification(normalized, code):
+            return normalized
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
     if not verify_otp(purpose, normalized, code.strip()):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
     return normalized

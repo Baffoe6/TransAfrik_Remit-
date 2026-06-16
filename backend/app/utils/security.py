@@ -17,8 +17,17 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def hash_pin(pin: str) -> str:
+    """PINs use the same bcrypt strategy as passwords — never store plain text."""
+    return pwd_context.hash(pin)
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def verify_pin(plain_pin: str, pin_hash: str) -> bool:
+    return pwd_context.verify(plain_pin, pin_hash)
 
 
 def create_access_token(subject: str | int, extra: dict[str, Any] | None = None) -> str:

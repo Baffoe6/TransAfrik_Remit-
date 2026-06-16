@@ -23,7 +23,7 @@ from app.models.referral_program import ReferralProgram
 from app.models.enums import CorridorStatus, PilotCustomerStatus
 from app.models.pilot import PilotCustomer, PilotInvite, PilotSettings
 from app.notifications.templates import DEFAULT_TEMPLATES
-from app.utils.security import hash_password
+from app.utils.security import hash_password, hash_pin
 
 settings = get_settings()
 
@@ -137,6 +137,7 @@ def seed():
             customer.first_name = "Thabo"
             customer.last_name = "Molefe"
             customer.phone_verified = True
+            customer.pin_hash = hash_pin("1234")
 
             profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == customer.id).first()
             if not profile:
@@ -345,7 +346,7 @@ def seed():
         db.commit()
         print("Seed completed successfully")
         if seed_demo:
-            print(f"  Demo customer: {settings.seed_customer_email} / {settings.seed_customer_password}")
+            print(f"  Demo customer: {settings.seed_customer_email} / PIN 1234 (legacy password: {settings.seed_customer_password})")
             print(f"  Demo agent: {settings.seed_agent_email} / {settings.seed_agent_password}")
         print(f"  Admin: {settings.seed_admin_email}")
         print(f"  Founder: {settings.seed_founder_email}")

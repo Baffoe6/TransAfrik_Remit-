@@ -21,8 +21,11 @@ from app.schemas.auth import (
     OtpVerifyPhoneRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
+    PinLoginRequest,
+    PinResetConfirm,
     RefreshRequest,
     RegisterRequest,
+    SetPinRequest,
     StepUpLoginRequest,
     TokenResponse,
     UserResponse,
@@ -47,8 +50,12 @@ from app.services.device_trust_service import (
 )
 from app.config import get_settings
 from app.services.otp_service import (
+    OTP_PURPOSE_BENEFICIARY_CHANGE,
+    OTP_PURPOSE_HIGH_VALUE_TRANSFER,
+    OTP_PURPOSE_KYC_UPDATE,
     OTP_PURPOSE_LOGIN,
     OTP_PURPOSE_PASSWORD_RESET,
+    OTP_PURPOSE_PIN_RESET,
     OTP_PURPOSE_STEP_UP,
     OTP_PURPOSE_VERIFY_PHONE,
     find_user_by_mobile,
@@ -69,7 +76,9 @@ from app.utils.security import (
     create_refresh_token,
     decode_token,
     hash_password,
+    hash_pin,
     verify_password,
+    verify_pin,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -146,60 +155,33 @@ def _find_user_by_identifier(db: Session, identifier: str) -> User | None:
     return db.query(User).filter(User.mobile_number == mobile).first()
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
-def register(request: Request, data: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
-    mobile = data.mobile_number
-    email = str(data.email).lower() if data.email else None
-
-    if db.query(User).filter(User.mobile_number == mobile).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mobile number already registered")
-
-    if email and db.query(User).filter(User.email == email).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-
-    user = User(
-        mobile_number=mobile,
-        email=email,
-        first_name=data.first_name,
-        last_name=data.last_name,
-        password_hash=hash_password(data.password),
-        role=UserRole.CUSTOMER,
-        status="active",
+def _user_response(user: User) -> UserResponse:
+    role = user.role.value if isinstance(user.role, UserRole) else user.role
+    return UserResponse(
+        id=user.id,
+        mobile_number=user.mobile_number,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=role,
+        status=user.status,
+        email_verified=user.email_verified,
+        phone_verified=user.phone_verified,
+        has_pin=bool(user.pin_hash),
     )
-    db.add(user)
-    db.flush()
-
-    profile = CustomerProfile(
-        user_id=user.id,
-        first_name=data.first_name,
-        last_name=data.last_name,
-    )
-    db.add(profile)
-    db.flush()
-
-    invite = validate_invite_for_registration(db, email, mobile, data.invite_code)
-    register_pilot_customer(db, user.id, invite)
-
-    return _issue_tokens(db, user, request)
 
 
-@router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/minute")
-def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(get_db)]):
+def _post_credential_login(
+    request: Request,
+    db: Session,
+    user: User,
+    *,
+    device_id: str | None,
+    device_label: str | None,
+    mfa_code: str | None = None,
+) -> TokenResponse:
+    """Shared flow after PIN/password verified: MFA, risk, step-up, tokens."""
     ip = get_client_ip(request)
-    user = _find_user_by_identifier(db, data.identifier)
-    if not user or not verify_password(data.password, user.password_hash):
-        record_failed_login(db, user, ip, data.identifier)
-        log_security_event(
-            db,
-            event_type=SecurityEventType.LOGIN_FAILED,
-            user_id=user.id if user else None,
-            ip_address=ip,
-            details=f"Failed login attempt for {data.identifier}",
-        )
-        db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid mobile number, email, or password")
 
     if is_account_locked(user):
         db.commit()
@@ -224,32 +206,22 @@ def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(g
         db.commit()
         return _issue_tokens(
             db, user, request,
-            device_id=data.device_id,
-            device_label=data.device_label,
+            device_id=device_id,
+            device_label=device_label,
             mfa_setup_required=True,
         )
 
     if mfa_state["verify_required"]:
-        if not data.mfa_code:
+        if not mfa_code:
             db.commit()
             return TokenResponse(mfa_required=True)
-        if not verify_mfa_code(db, user.id, data.mfa_code):
-            log_security_event(
-                db,
-                event_type=SecurityEventType.MFA_FAILED,
-                user_id=user.id,
-                ip_address=ip,
-            )
+        if not verify_mfa_code(db, user.id, mfa_code):
+            log_security_event(db, event_type=SecurityEventType.MFA_FAILED, user_id=user.id, ip_address=ip)
             db.commit()
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid MFA code")
-        log_security_event(
-            db,
-            event_type=SecurityEventType.MFA_VERIFIED,
-            user_id=user.id,
-            ip_address=ip,
-        )
+        log_security_event(db, event_type=SecurityEventType.MFA_VERIFIED, user_id=user.id, ip_address=ip)
 
-    fingerprint = fingerprint_device(data.device_id, request.headers.get("User-Agent"))
+    fingerprint = fingerprint_device(device_id, request.headers.get("User-Agent"))
     risk = compute_login_risk(
         db,
         user_id=user.id,
@@ -300,10 +272,109 @@ def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(g
         db,
         user,
         request,
-        device_id=data.device_id,
-        device_label=data.device_label,
+        device_id=device_id,
+        device_label=device_label,
         risk_score=risk["risk_score"],
         trust_device=risk["device_trusted"],
+    )
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+def register(request: Request, data: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
+    mobile = data.mobile_number
+    email = str(data.email).lower() if data.email else None
+
+    if db.query(User).filter(User.mobile_number == mobile).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mobile number already registered")
+
+    if email and db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+    user = User(
+        mobile_number=mobile,
+        email=email,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        pin_hash=hash_pin(data.pin),
+        password_hash=hash_password(data.password) if data.password else None,
+        role=UserRole.CUSTOMER,
+        status="active",
+    )
+    db.add(user)
+    db.flush()
+
+    profile = CustomerProfile(
+        user_id=user.id,
+        first_name=data.first_name,
+        last_name=data.last_name,
+    )
+    db.add(profile)
+    db.flush()
+
+    invite = validate_invite_for_registration(db, email, mobile, data.invite_code)
+    register_pilot_customer(db, user.id, invite)
+
+    if data.referral_code:
+        from app.services.referral_program_service import record_referral_signup
+
+        record_referral_signup(db, data.referral_code.strip().upper(), user.id)
+
+    return _issue_tokens(db, user, request)
+
+
+@router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
+def login(request: Request, data: LoginRequest, db: Annotated[Session, Depends(get_db)]):
+    """Legacy email + password login for staff and migrated accounts."""
+    ip = get_client_ip(request)
+    user = _find_user_by_identifier(db, data.identifier)
+    if not user or not user.password_hash or not verify_password(data.password, user.password_hash):
+        record_failed_login(db, user, ip, data.identifier)
+        log_security_event(
+            db,
+            event_type=SecurityEventType.LOGIN_FAILED,
+            user_id=user.id if user else None,
+            ip_address=ip,
+            details=f"Failed login attempt for {data.identifier}",
+        )
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+
+    return _post_credential_login(
+        request,
+        db,
+        user,
+        device_id=data.device_id,
+        device_label=data.device_label,
+        mfa_code=data.mfa_code,
+    )
+
+
+@router.post("/login/pin", response_model=TokenResponse)
+@limiter.limit("10/minute")
+def login_with_pin(request: Request, data: PinLoginRequest, db: Annotated[Session, Depends(get_db)]):
+    """Primary customer login — mobile number + 4-digit PIN."""
+    ip = get_client_ip(request)
+    user = find_user_by_mobile(db, data.mobile_number)
+    if not user or not user.pin_hash or not verify_pin(data.pin, user.pin_hash):
+        record_failed_login(db, user, ip, data.mobile_number)
+        log_security_event(
+            db,
+            event_type=SecurityEventType.LOGIN_FAILED,
+            user_id=user.id if user else None,
+            ip_address=ip,
+            details=f"Failed PIN login for {data.mobile_number}",
+        )
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid mobile number or PIN")
+
+    return _post_credential_login(
+        request,
+        db,
+        user,
+        device_id=data.device_id,
+        device_label=data.device_label,
     )
 
 
@@ -326,11 +397,21 @@ def otp_send(
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
         user_id = user.id
-    elif data.purpose == OTP_PURPOSE_PASSWORD_RESET:
+    elif data.purpose in (OTP_PURPOSE_PASSWORD_RESET, OTP_PURPOSE_PIN_RESET):
         user = find_user_by_mobile(db, data.mobile_number)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
         user_id = user.id
+    elif data.purpose in (
+        OTP_PURPOSE_BENEFICIARY_CHANGE,
+        OTP_PURPOSE_HIGH_VALUE_TRANSFER,
+        OTP_PURPOSE_KYC_UPDATE,
+    ):
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+        if data.mobile_number != current_user.mobile_number:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mobile number mismatch")
+        user_id = current_user.id
     elif data.purpose == OTP_PURPOSE_STEP_UP:
         stepup = get_stepup(data.mobile_number)
         if not stepup:
@@ -536,10 +617,18 @@ def password_forgot(request: Request, data: PasswordResetRequest, db: Annotated[
     user = find_user_by_mobile(db, data.mobile_number)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
-    result = send_otp(mobile=data.mobile_number, channel="sms", purpose=OTP_PURPOSE_PASSWORD_RESET, user_id=user.id)
-    log_security_event(db, event_type=SecurityEventType.OTP_SENT, user_id=user.id, ip_address=get_client_ip(request), details="password_reset")
+    purpose = OTP_PURPOSE_PIN_RESET if user.pin_hash else OTP_PURPOSE_PASSWORD_RESET
+    result = send_otp(mobile=data.mobile_number, channel="sms", purpose=purpose, user_id=user.id)
+    log_security_event(db, event_type=SecurityEventType.OTP_SENT, user_id=user.id, ip_address=get_client_ip(request), details=purpose)
     db.commit()
     return result
+
+
+@router.post("/pin/forgot")
+@limiter.limit("5/minute")
+def pin_forgot(request: Request, data: PasswordResetRequest, db: Annotated[Session, Depends(get_db)]):
+    """Request OTP to reset 4-digit PIN."""
+    return password_forgot(request, data, db)
 
 
 @router.post("/password/reset")
@@ -560,6 +649,52 @@ def password_reset(request: Request, data: PasswordResetConfirm, db: Annotated[S
     log_security_event(db, event_type=SecurityEventType.PASSWORD_CHANGED, user_id=user.id, ip_address=get_client_ip(request), details="password_reset_otp")
     db.commit()
     return {"message": "Password reset successfully"}
+
+
+@router.post("/pin/reset")
+@limiter.limit("5/minute")
+def pin_reset(request: Request, data: PinResetConfirm, db: Annotated[Session, Depends(get_db)]):
+    user = find_user_by_mobile(db, data.mobile_number)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No account found for this mobile number")
+    try:
+        verify_otp_code(data.mobile_number, OTP_PURPOSE_PIN_RESET, data.code)
+    except HTTPException:
+        log_security_event(db, event_type=SecurityEventType.OTP_FAILED, user_id=user.id, ip_address=get_client_ip(request), details="pin_reset")
+        db.commit()
+        raise
+    if user.pin_hash and verify_pin(data.new_pin, user.pin_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New PIN must be different from your current PIN")
+    user.pin_hash = hash_pin(data.new_pin)
+    record_successful_login(db, user)
+    log_security_event(db, event_type=SecurityEventType.PASSWORD_CHANGED, user_id=user.id, ip_address=get_client_ip(request), details="pin_reset_otp")
+    db.commit()
+    return {"message": "PIN reset successfully"}
+
+
+@router.post("/pin/set")
+def set_pin(
+    data: SetPinRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    request: Request,
+):
+    """Allow legacy email/password customers to create a PIN for mobile login."""
+    if current_user.pin_hash:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="PIN already set")
+    if current_user.password_hash:
+        if not data.current_password or not verify_password(data.current_password, current_user.password_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password required")
+    current_user.pin_hash = hash_pin(data.pin)
+    log_security_event(
+        db,
+        event_type=SecurityEventType.PASSWORD_CHANGED,
+        user_id=current_user.id,
+        ip_address=get_client_ip(request),
+        details="pin_set",
+    )
+    db.commit()
+    return {"message": "PIN created successfully", "has_pin": True}
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -616,7 +751,7 @@ def logout(
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: Annotated[User, Depends(get_current_user)]):
-    return current_user
+    return _user_response(current_user)
 
 
 @router.post("/verify-email")

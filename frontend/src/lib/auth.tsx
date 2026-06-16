@@ -57,11 +57,14 @@ interface AuthContextType {
 
 interface RegisterData {
   mobile_number: string;
-  password: string;
+  pin: string;
   first_name: string;
   last_name: string;
   email?: string;
   invite_code?: string;
+  referral_code?: string;
+  accept_popia: boolean;
+  accept_terms: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);

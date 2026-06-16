@@ -10,9 +10,9 @@
 
 | Flow | Status | Notes |
 |------|--------|-------|
-| Registration (mobile-first) | ✅ | POPIA/AML consents, invite code, 8+ char password |
+| Registration (mobile-first) | ✅ | Mobile + 4-digit PIN, POPIA/terms consents, optional email/referral/invite |
 | Mobile OTP verification | ✅ | Post-register gate; resend with cooldown |
-| Login (mobile/email + password) | ✅ | OTP login alternative |
+| Login (mobile + PIN) | ✅ | Primary; email/password secondary; OTP for new devices |
 | KYC upload | ✅ | `id_passport`, proof of address, selfie — backend-aligned |
 | Beneficiaries | ✅ | MM/bank/cash pickup, Ghana validation |
 | Transfer creation | ✅ | Real API records; KYC/phone gates |
@@ -36,7 +36,7 @@
 
 ## Customer onboarding path
 
-1. Register → accept terms/POPIA/AML
+1. Register (mobile + PIN) → accept POPIA & terms
 2. Verify mobile (OTP)
 3. Complete KYC documents
 4. Add beneficiary

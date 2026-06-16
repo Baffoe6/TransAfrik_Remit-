@@ -76,8 +76,6 @@ def validate_invite_for_registration(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invite code already used")
     if invite.email and email and invite.email.lower() != email.lower():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invite code not valid for this email")
-    if invite.email and not email:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This invite requires an email address")
     return invite
 
 

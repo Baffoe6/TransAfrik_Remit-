@@ -20,7 +20,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(true);
     setError("");
     try {
-      await authApi.forgotPassword(normalizePhone(mobile));
+      await authApi.forgotPin(normalizePhone(mobile));
       setMsg("If your number is registered, an SMS code has been sent.");
       setStep("reset");
     } catch (e) {
@@ -34,7 +34,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(true);
     setError("");
     try {
-      await authApi.resetPassword(normalizePhone(mobile), code, newPin);
+      await authApi.resetPin(normalizePhone(mobile), code, newPin);
       setMsg("PIN updated. You can sign in now.");
       navigation.navigate("Login");
     } catch (e) {
