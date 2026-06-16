@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     account_lockout_minutes: int = 30
     password_max_age_days: int = 90
     admin_ip_allowlist_enabled: bool = False
+    flutterwave_public_key: str = ""
+    flutterwave_secret_key: str = ""
+    flutterwave_encryption_key: str = ""
+    flutterwave_webhook_secret: str = ""
+    flutterwave_redirect_url: str = "https://app.ipaygo.co.za/payment/complete"
 
     @property
     def is_production(self) -> bool:

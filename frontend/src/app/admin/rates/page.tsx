@@ -105,7 +105,7 @@ export default function AdminRatesPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Exchange Rates (ZAR → GHS)</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Corridor exchange rates</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={addRate} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">

@@ -66,10 +66,15 @@ export function LiveCalculator({
           <View style={{ height: 1, backgroundColor: compact ? theme.borderLight : "rgba(255,255,255,0.2)", marginVertical: spacing.sm }} />
           <View style={{ gap: spacing.sm }}>
             <Row label="Fee" value={formatZAR(quote.fee_zar)} light={!compact} muted />
-            <Row label="Rate" value={`1 ZAR = ${quote.exchange_rate} ${currency}`} light={!compact} muted />
+            <Row
+              label="Rate"
+              value={`1 ${quote.from_currency ?? "ZAR"} = ${quote.customer_rate ?? quote.exchange_rate} ${quote.to_currency ?? currency}`}
+              light={!compact}
+              muted
+            />
             <AmountDisplay
               label="Recipient receives"
-              amount={formatForeign(quote.receive_amount_ghs, currency)}
+              amount={formatForeign(quote.receive_amount ?? quote.receive_amount_ghs, quote.to_currency ?? currency)}
               sublabel={`Total ${formatZAR(quote.total_amount_zar)}`}
               size="sm"
               light={!compact}

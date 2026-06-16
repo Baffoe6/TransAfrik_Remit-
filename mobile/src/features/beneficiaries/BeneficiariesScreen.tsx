@@ -49,6 +49,7 @@ export default function BeneficiariesScreen() {
   });
 
   const quickSend = (b: Beneficiary) => {
+    if (b.status !== "approved") return;
     hapticLight();
     sendFlow.reset();
     sendFlow.setDestination(b.country, `ZA-${b.country}`, b.country === "GH" ? "GHS" : "USD");
@@ -71,7 +72,11 @@ export default function BeneficiariesScreen() {
     );
   };
 
-  const verifyVariant = (status: string) => (status === "verified" || status === "active" ? "success" : status === "pending" ? "warning" : "neutral");
+  const verifyVariant = (status: string) =>
+    status === "approved" ? "success" : status === "pending" ? "warning" : status === "rejected" ? "error" : "neutral";
+
+  const statusLabel = (status: string) =>
+    status === "approved" ? "Active" : status === "pending" ? "Under review" : status;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
@@ -118,7 +123,7 @@ export default function BeneficiariesScreen() {
                     <TouchableOpacity onPress={() => toggleFavorite(item.id)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                       <Ionicons name={favoriteIds.includes(item.id) ? "star" : "star-outline"} size={22} color={theme.accent} />
                     </TouchableOpacity>
-                    <StatusPill label={item.status === "active" ? "Verified" : item.status} variant={verifyVariant(item.status) as "success"} size="sm" />
+                    <StatusPill label={statusLabel(item.status)} variant={verifyVariant(item.status) as "success"} size="sm" />
                   </View>
                 }
                 style={{ backgroundColor: "transparent" }}

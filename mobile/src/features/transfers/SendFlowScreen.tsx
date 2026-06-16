@@ -90,7 +90,9 @@ export default function SendFlowScreen({ navigation }: Props) {
 
   useEffect(() => () => useSendFlowStore.getState().reset(), []);
 
-  const filteredBeneficiaries = beneficiaries.filter((b) => b.country === flow.destinationCountry || flow.destinationCountry === "GH");
+  const filteredBeneficiaries = beneficiaries.filter(
+    (b) => (b.country === flow.destinationCountry || flow.destinationCountry === "GH") && b.status === "approved",
+  );
   const partner = PAYOUT_PARTNERS.find((p) => (p.corridors as readonly string[]).includes(flow.destinationCountry));
   const corridor = CORRIDORS.find((c) => c.code === flow.corridorCode);
 

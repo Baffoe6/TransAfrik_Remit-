@@ -1,6 +1,7 @@
 from app.payment_providers.base import PaymentProvider
 from app.payment_providers.easy_pay import EasyPayProvider
 from app.payment_providers.eft import EftProvider
+from app.payment_providers.flutterwave import FlutterwaveProvider
 from app.payment_providers.instant_eft import (
     OzowProvider,
     PayFastProvider,
@@ -40,6 +41,8 @@ _PAYMENT_PROVIDERS: dict[str, type[PaymentProvider]] = {
     "ozow": OzowProvider,
     "peach_payments": PeachPaymentsProvider,
     "payfast": PayFastProvider,
+    "flutterwave": FlutterwaveProvider,
+    "card": FlutterwaveProvider,
 }
 
 
@@ -49,6 +52,6 @@ def get_payment_provider(provider_class: str, config: dict | None = None) -> Pay
     provider_cls = _PAYMENT_PROVIDERS.get(provider_class)
     if not provider_cls:
         raise ValueError(f"Unknown payment provider class: {provider_class}")
-    if config is not None and provider_class in ("pay_at", "easy_pay"):
+    if config is not None and provider_class in ("pay_at", "easy_pay", "flutterwave", "card"):
         return provider_cls(config=config)
     return provider_cls()

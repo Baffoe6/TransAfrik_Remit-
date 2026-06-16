@@ -60,19 +60,18 @@ def sync_fx_from_feed(
             )
             db.add(snapshot)
 
-            if from_ccy == "ZAR" and to_ccy == "GHS":
-                from datetime import date as date_cls
+            from datetime import date as date_cls
 
-                create_exchange_rate(
-                    db,
-                    from_currency=from_ccy,
-                    to_currency=to_ccy,
-                    rate=feed_rate.rate,
-                    effective_from=date_cls.today(),
-                    effective_to=None,
-                    created_by=None,
-                    change_reason=f"FX feed sync: {source_code}",
-                )
+            create_exchange_rate(
+                db,
+                from_currency=from_ccy,
+                to_currency=to_ccy,
+                rate=feed_rate.rate,
+                effective_from=date_cls.today(),
+                effective_to=None,
+                created_by=None,
+                change_reason=f"FX feed sync: {source_code}",
+            )
 
             synced += 1
 

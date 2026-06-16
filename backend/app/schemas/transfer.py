@@ -15,9 +15,15 @@ class CalculatorResponse(BaseModel):
     fee_zar: Decimal
     exchange_rate: Decimal
     receive_amount_ghs: Decimal
+    receive_amount: Decimal | None = None
     total_amount_zar: Decimal
     from_currency: str = "ZAR"
     to_currency: str = "GHS"
+    corridor_code: str | None = None
+    base_rate: Decimal | None = None
+    markup_percentage: Decimal | None = None
+    customer_rate: Decimal | None = None
+    provider: str | None = None
 
 
 class TransferCreate(BaseModel):

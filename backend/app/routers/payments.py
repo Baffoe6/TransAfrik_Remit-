@@ -178,8 +178,7 @@ def create_flutterwave_session(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    """Create a Flutterwave payment session — secrets stay server-side; mobile receives public URL only."""
-    import secrets
+    """Create Flutterwave Checkout session — card, bank, Capitec Pay, 1Voucher, etc."""
     from datetime import UTC, datetime, timedelta
 
     transfer = (
@@ -190,14 +189,54 @@ def create_flutterwave_session(
     if not transfer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer not found")
 
-    session_ref = f"flw_{transfer.reference}_{secrets.token_hex(6)}"
-    # Public checkout URL — replace with Flutterwave API response when keys are configured
-    base = settings.cors_origins.split(",")[0].strip() if settings.cors_origins else "https://app.ipaygo.co.za"
-    payment_url = f"{base}/pay/flutterwave?ref={session_ref}&transfer={transfer.reference}"
+    method = (
+        db.query(PaymentMethod)
+        .filter(PaymentMethod.code.in_(("flutterwave", "card", "payfast")), PaymentMethod.is_active.is_(True))
+        .order_by(PaymentMethod.id.asc())
+        .first()
+    )
+    if not method:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Flutterwave payment method not configured")
+
+    profile = db.query(CustomerProfile).filter(CustomerProfile.user_id == current_user.id).first()
+    customer_name = f"{profile.first_name} {profile.last_name}" if profile else (current_user.first_name or "Customer")
+
+    from app.models.enums import PaymentReferenceStatus
+
+    existing = (
+        db.query(PaymentReference)
+        .filter(
+            PaymentReference.transfer_id == transfer_id,
+            PaymentReference.provider.in_(("flutterwave", "card")),
+            PaymentReference.status == PaymentReferenceStatus.AWAITING_PAYMENT,
+        )
+        .order_by(PaymentReference.created_at.desc())
+        .first()
+    )
+    if existing and existing.provider_metadata and existing.provider_metadata.get("payment_url"):
+        return FlutterwaveSessionResponse(
+            payment_url=existing.provider_metadata["payment_url"],
+            session_ref=existing.reference_number,
+            provider="flutterwave",
+            status="pending",
+            expires_at=(existing.expiry_date.isoformat() if existing.expiry_date else None),
+        )
+
+    try:
+        payment_ref = generate_payment_reference(db, transfer, method, current_user, customer_name)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    payment_url = (payment_ref.provider_metadata or {}).get("payment_url")
+    if not payment_url:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Flutterwave did not return a checkout URL")
+
+    db.commit()
+    db.refresh(payment_ref)
 
     return FlutterwaveSessionResponse(
         payment_url=payment_url,
-        session_ref=session_ref,
+        session_ref=payment_ref.reference_number,
         provider="flutterwave",
         status="pending",
         expires_at=(datetime.now(UTC) + timedelta(hours=24)).isoformat(),
@@ -224,10 +263,11 @@ def get_payment_status(
         .order_by(PaymentReference.created_at.desc())
         .first()
     )
-    payment_status = ref.status if ref else "none"
+    payment_status = ref.status.value if ref and hasattr(ref.status, "value") else (str(ref.status) if ref else "none")
+    transfer_status = transfer.status.value if hasattr(transfer.status, "value") else str(transfer.status)
     return PaymentStatusResponse(
         transfer_id=transfer_id,
-        status=transfer.status,
+        status=transfer_status,
         payment_status=payment_status,
         reference_number=ref.reference_number if ref else None,
     )

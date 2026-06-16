@@ -47,6 +47,8 @@ def process_webhook(db: Session, event: WebhookEvent) -> WebhookEvent:
         "pay_at": _handle_payment,
         "easy_pay": _handle_payment,
         "eft": _handle_payment,
+        "flutterwave": _handle_payment,
+        "card": _handle_payment,
         "mukuru_api": _handle_mukuru,
         "manual_mukuru": _handle_mukuru,
     }

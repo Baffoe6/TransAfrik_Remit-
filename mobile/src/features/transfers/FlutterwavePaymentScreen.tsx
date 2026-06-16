@@ -32,7 +32,12 @@ export default function FlutterwavePaymentScreen({ route, navigation }: Props) {
   });
 
   useEffect(() => {
-    if (status?.payment_status === "paid" || status?.status === "payment_received") {
+    const paid =
+      status?.payment_status === "paid" ||
+      status?.status === "payment_verified" ||
+      status?.status === "ready_for_processing" ||
+      status?.status === "processing";
+    if (paid) {
       navigation.replace("TransferTracking", { id: transferId });
     }
   }, [status, transferId, navigation]);

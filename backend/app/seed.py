@@ -95,6 +95,24 @@ PAYMENT_METHODS = [
     {"name": "Flash Voucher", "code": "flash", "provider": "flash", "provider_class": "flash", "description": "Pay at Flash agent outlets", "requires_proof_upload": False, "is_instant": False},
     {"name": "Shoprite Voucher", "code": "shoprite", "provider": "shoprite", "provider_class": "shoprite", "description": "Pay at Shoprite / Checkers", "requires_proof_upload": False, "is_instant": False},
     {"name": "Pick n Pay Voucher", "code": "pick_n_pay", "provider": "pick_n_pay", "provider_class": "pick_n_pay", "description": "Pay at Pick n Pay / Boxer", "requires_proof_upload": False, "is_instant": False},
+    {
+        "name": "Flutterwave Checkout",
+        "code": "flutterwave",
+        "provider": "flutterwave",
+        "provider_class": "flutterwave",
+        "description": "Card, bank transfer, Capitec Pay, 1Voucher and more via Flutterwave",
+        "requires_proof_upload": False,
+        "is_instant": True,
+    },
+    {
+        "name": "Card Payment",
+        "code": "card",
+        "provider": "flutterwave",
+        "provider_class": "card",
+        "description": "Debit/credit card via Flutterwave Checkout",
+        "requires_proof_upload": False,
+        "is_instant": True,
+    },
 ]
 
 
@@ -187,25 +205,65 @@ def seed():
 
         for pm in PAYMENT_METHODS:
             if not db.query(PaymentMethod).filter(PaymentMethod.code == pm["code"]).first():
+                inactive_codes = ("stitch", "ozow", "peach_payments")
                 db.add(PaymentMethod(
                     **pm,
-                    is_active=pm["code"] not in ("stitch", "ozow", "peach_payments", "payfast"),
+                    is_active=pm["code"] not in inactive_codes,
                 ))
+            else:
+                existing_pm = db.query(PaymentMethod).filter(PaymentMethod.code == pm["code"]).first()
+                if existing_pm and pm["code"] in ("flutterwave", "card"):
+                    existing_pm.is_active = True
+                    existing_pm.provider_class = pm["provider_class"]
 
         if not db.query(FxRateSource).filter(FxRateSource.code == "manual").first():
             db.add(FxRateSource(code="manual", name="Admin Manual Rates", source_type=FxRateSourceType.MANUAL, priority=10, is_active=True))
 
         if not db.query(FxMarkupRule).first():
-            db.add(FxMarkupRule(from_currency="ZAR", to_currency="GHS", markup_type=FxMarkupType.PERCENTAGE, markup_value=Decimal("2.0"), priority=0, is_active=True))
+            markup_pairs = [
+                ("ZAR", "GHS", Decimal("2.0")),
+                ("ZAR", "KES", Decimal("2.0")),
+                ("ZAR", "NGN", Decimal("2.5")),
+                ("ZAR", "UGX", Decimal("2.0")),
+                ("ZAR", "ZMW", Decimal("2.0")),
+                ("ZAR", "USD", Decimal("1.5")),
+                ("ZAR", "ZWL", Decimal("2.0")),
+                ("GBP", "GHS", Decimal("1.5")),
+                ("USD", "GHS", Decimal("1.5")),
+                ("EUR", "GHS", Decimal("1.5")),
+            ]
+            for src, dst, pct in markup_pairs:
+                db.add(FxMarkupRule(
+                    from_currency=src, to_currency=dst,
+                    markup_type=FxMarkupType.PERCENTAGE, markup_value=pct,
+                    priority=0, is_active=True,
+                ))
 
-        if not db.query(ExchangeRate).filter(ExchangeRate.is_active.is_(True)).first():
-            db.add(ExchangeRate(
-                from_currency="ZAR",
-                to_currency="GHS",
-                rate=Decimal("0.72"),
-                effective_from=date.today(),
-                is_active=True,
-            ))
+        rate_pairs = [
+            ("ZAR", "GHS", Decimal("0.72")),
+            ("ZAR", "KES", Decimal("7.15")),
+            ("ZAR", "NGN", Decimal("42.50")),
+            ("ZAR", "UGX", Decimal("195.00")),
+            ("ZAR", "ZMW", Decimal("1.35")),
+            ("ZAR", "USD", Decimal("0.054")),
+            ("ZAR", "ZWL", Decimal("18.50")),
+            ("GBP", "GHS", Decimal("15.80")),
+            ("USD", "GHS", Decimal("12.50")),
+            ("EUR", "GHS", Decimal("13.60")),
+        ]
+        for src, dst, rate in rate_pairs:
+            if not db.query(ExchangeRate).filter(
+                ExchangeRate.from_currency == src,
+                ExchangeRate.to_currency == dst,
+                ExchangeRate.is_active.is_(True),
+            ).first():
+                db.add(ExchangeRate(
+                    from_currency=src,
+                    to_currency=dst,
+                    rate=rate,
+                    effective_from=date.today(),
+                    is_active=True,
+                ))
 
         if not db.query(FeeRule).first():
             db.add_all([
@@ -244,6 +302,7 @@ def seed():
             ("flash", "payment", "Flash", True),
             ("shoprite", "payment", "Shoprite", True),
             ("pick_n_pay", "payment", "Pick n Pay", True),
+            ("flutterwave", "payment", "Flutterwave Checkout", True),
             ("mock_mukuru", "remittance", "Mock Mukuru", True),
             ("live_mukuru", "remittance", "Live Mukuru API", False),
             ("flutterwave", "remittance", "Flutterwave", False),

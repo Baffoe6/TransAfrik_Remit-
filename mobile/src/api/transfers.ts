@@ -6,9 +6,15 @@ export interface TransferQuote {
   fee_zar: string;
   exchange_rate: string;
   receive_amount_ghs: string;
+  receive_amount?: string;
   total_amount_zar: string;
   from_currency?: string;
   to_currency?: string;
+  corridor_code?: string;
+  base_rate?: string;
+  markup_percentage?: string;
+  customer_rate?: string;
+  provider?: string;
 }
 
 export const transfersApi = {
