@@ -2,7 +2,7 @@
   "expo": {
     "name": "TransAfrik Remit",
     "slug": "transafrik-remit",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -29,7 +29,7 @@
         "backgroundColor": "#1B5E3B"
       },
       "package": "co.za.ipaygo.transafrik",
-      "versionCode": 3,
+      "versionCode": 5,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
