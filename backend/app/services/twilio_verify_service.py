@@ -2,8 +2,6 @@
 
 import logging
 
-from fastapi import HTTPException, status
-
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -35,11 +33,8 @@ def send_verification(mobile: str, channel: str = "sms") -> dict:
         logger.info("Twilio Verify sent status=%s to=%s", verification.status, mobile[-4:])
         return {"provider": "twilio_verify", "sent": True, "status": verification.status}
     except Exception as exc:
-        logger.exception("Twilio Verify send failed")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to send verification: {exc}",
-        ) from exc
+        logger.exception("Twilio Verify send failed — falling back to app OTP")
+        return {"provider": "console", "sent": False, "fallback": True, "error": str(exc)}
 
 
 def check_verification(mobile: str, code: str) -> bool:
