@@ -29,4 +29,26 @@ export const SUPPORT_CATEGORIES = [
   { value: "general", label: "General enquiry" },
 ] as const;
 
-export const FLUTTERWAVE_METHOD_CODES = new Set(["flutterwave"]);
+export const FLUTTERWAVE_METHOD_CODES = new Set([
+  "flutterwave",
+  "fw_card",
+  "fw_eft",
+  "fw_capitec",
+  "fw_1voucher",
+  "fw_ussd",
+  "fw_account",
+]);
+
+export function isFlutterwaveMethod(code: string): boolean {
+  return code.startsWith("fw_") || FLUTTERWAVE_METHOD_CODES.has(code.toLowerCase());
+}
+
+export const FLUTTERWAVE_METHOD_ICONS: Record<string, keyof typeof import("@expo/vector-icons").Ionicons.glyphMap> = {
+  fw_card: "card",
+  fw_eft: "business",
+  fw_capitec: "phone-portrait",
+  fw_1voucher: "ticket",
+  fw_ussd: "keypad",
+  fw_account: "wallet",
+  flutterwave: "card",
+};

@@ -26,8 +26,7 @@ from app.utils.voucher_pdf import generate_voucher_pdf
 router = APIRouter(prefix="/payments", tags=["Payments"])
 settings = get_settings()
 
-# Customer checkout is Flutterwave only (card, bank transfer, Capitec Pay, 1Voucher, etc.).
-FLUTTERWAVE_CHECKOUT_CODES = ("flutterwave",)
+from app.payment_providers.flutterwave_options import FLUTTERWAVE_METHOD_CODES
 
 
 @router.get("/methods", response_model=list[PaymentMethodResponse])
@@ -36,7 +35,7 @@ def list_payment_methods(db: Annotated[Session, Depends(get_db)]):
         db.query(PaymentMethod)
         .filter(
             PaymentMethod.is_active.is_(True),
-            PaymentMethod.code.in_(FLUTTERWAVE_CHECKOUT_CODES),
+            PaymentMethod.code.in_(FLUTTERWAVE_METHOD_CODES),
         )
         .order_by(PaymentMethod.id.asc())
         .all()
@@ -195,12 +194,20 @@ def create_flutterwave_session(
     if not transfer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer not found")
 
-    method = (
-        db.query(PaymentMethod)
-        .filter(PaymentMethod.code.in_(("flutterwave", "card", "payfast")), PaymentMethod.is_active.is_(True))
-        .order_by(PaymentMethod.id.asc())
-        .first()
-    )
+    method = None
+    if transfer.payment_method_id:
+        method = db.query(PaymentMethod).filter(
+            PaymentMethod.id == transfer.payment_method_id,
+            PaymentMethod.is_active.is_(True),
+            PaymentMethod.code.in_(FLUTTERWAVE_METHOD_CODES),
+        ).first()
+    if not method:
+        method = (
+            db.query(PaymentMethod)
+            .filter(PaymentMethod.code.in_(FLUTTERWAVE_METHOD_CODES), PaymentMethod.is_active.is_(True))
+            .order_by(PaymentMethod.id.asc())
+            .first()
+        )
     if not method:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Flutterwave payment method not configured")
 

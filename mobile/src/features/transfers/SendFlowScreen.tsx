@@ -23,7 +23,7 @@ import { typography } from "../../theme/typography";
 import { RootStackParamList } from "../../navigation/MainNavigator";
 import type { Beneficiary } from "../../types";
 import { useTransferEligibility } from "../../hooks/useTransferEligibility";
-import { FLUTTERWAVE_METHOD_CODES, COMPLIANCE } from "../../utils/compliance";
+import { FLUTTERWAVE_METHOD_ICONS, isFlutterwaveMethod } from "../../utils/compliance";
 import { hapticSuccess } from "../../services/haptics";
 
 type Props = NativeStackScreenProps<RootStackParamList, "SendFlow">;
@@ -82,10 +82,7 @@ export default function SendFlowScreen({ navigation }: Props) {
     enabled: flow.step >= 3,
   });
 
-  const flutterwaveMethods = useMemo(
-    () => methods.filter((m) => FLUTTERWAVE_METHOD_CODES.has(m.code.toLowerCase())),
-    [methods],
-  );
+  const flutterwaveMethods = useMemo(() => methods.filter((m) => isFlutterwaveMethod(m.code)), [methods]);
 
   useEffect(() => {
     if (flow.step >= 4 && flutterwaveMethods.length === 1 && !flow.paymentMethod) {
@@ -244,7 +241,7 @@ export default function SendFlowScreen({ navigation }: Props) {
           {flutterwaveMethods.map((m) => (
             <SelectableRow key={m.id} selected={flow.paymentMethod?.id === m.id} onPress={() => flow.setPaymentMethod(m)}>
               <View style={{ width: 44, height: 44, borderRadius: radius.md, backgroundColor: theme.primaryMuted, alignItems: "center", justifyContent: "center", marginRight: spacing.md }}>
-                <Ionicons name="card" size={22} color={theme.primary} />
+                <Ionicons name={FLUTTERWAVE_METHOD_ICONS[m.code] ?? "card"} size={22} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={typography.bodyBold}>{m.name}</Text>

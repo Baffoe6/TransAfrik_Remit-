@@ -29,7 +29,7 @@ export default function NewTransferPage() {
       if (active.length) setBeneficiaryId(String(active[0].id));
     });
     api<PaymentMethod[]>("/payments/methods").then((m) => {
-      const flutterwave = m.filter((x) => x.is_active && x.code === "flutterwave");
+      const flutterwave = m.filter((x) => x.is_active && (x.code.startsWith("fw_") || x.code === "flutterwave"));
       setPaymentMethods(flutterwave);
       if (flutterwave.length) setPaymentMethodCode(flutterwave[0].code);
     });

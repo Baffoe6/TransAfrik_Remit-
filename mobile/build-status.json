@@ -1,0 +1,40 @@
+﻿{
+  "id": "4d713993-8981-495a-8d3b-f68d661cea7a",
+  "status": "IN_PROGRESS",
+  "platform": "ANDROID",
+  "artifacts": {},
+  "fingerprint": {
+    "id": "019ed1df-798d-726c-bcc2-e0865aa56680",
+    "hash": "4fe0f12cd92dbecb0314b36c39a85dbc98e49cab"
+  },
+  "initiatingActor": {
+    "id": "645b81b0-7428-468c-bc19-7b92afc99335",
+    "displayName": "baffoe6"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/fadbd8c6-4c8a-4dd6-b520-2ff6644a66c9/4d713993-8981-495a-8d3b-f68d661cea7a/2026-06-16T19%3A19%3A14Z-06627982-32f7-485e-8e5e-2488dfc65aa4.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260616%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260616T193044Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=67f02a94199d99a75a7f4c41e6ff7be4a59b39bdcf83c4158e25e13a0a05571f57834f3fdfd428adf9a93a8d598b0a75a4786a820f90da475255fdd11170bf73837bb32db734ae739b52e8fcae4a7f03ffb3ab4b2ffaf2201e6a2f4639d8e6a84c1b03d838f1d3e955db47e4448b8138bd20a9ee996262f23cec64ba01cce2f3ee236fc9afed83773e0cfdb4e64b881730d71a7e4433ad266ccafb60afedf3d15b489eea16d3dab9b897b6c479b70f0de1015d6eafaa94b5dd6f4e320522eee13f3d7d4d33e68dca4af8c22a69c36ad2898e0bd8904ae220b7a85e3d43a36ceb99d26ca9c327772187445eea78779499e951e3ce3d86f1692f2fd847e4fd2b54"
+  ],
+  "project": {
+    "id": "fadbd8c6-4c8a-4dd6-b520-2ff6644a66c9",
+    "name": "transafrik-remit",
+    "slug": "transafrik-remit",
+    "ownerAccount": {
+      "id": "bd50492c-17f6-4487-baa7-97418c03d635",
+      "name": "baffoe6"
+    }
+  },
+  "channel": "preview",
+  "distribution": "INTERNAL",
+  "buildProfile": "preview-apk",
+  "sdkVersion": "52.0.0",
+  "appVersion": "2.2.0",
+  "appBuildVersion": "1",
+  "runtimeVersion": "2.2.0",
+  "gitCommitHash": "2a33fb0416ec5fb67e6743f706d2acd67cec3c7b",
+  "gitCommitMessage": "Verify Flutterwave webhooks with verif-hash before processing payments.\n\nReject missing or invalid signatures with 401/403 and only apply charge.completed events after validation, with tests for duplicates.\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+  "priority": "HIGH",
+  "createdAt": "2026-06-16T19:19:04.309Z",
+  "updatedAt": "2026-06-16T19:19:19.020Z",
+  "expirationDate": "2026-09-14T19:19:04.330Z",
+  "isForIosSimulator": false
+}

@@ -9,6 +9,7 @@ from app.models.payment_reference import PaymentReference
 from app.models.transfer import Transfer
 from app.models.user import User
 from app.payment_providers.base import PaymentReferenceRequest
+from app.payment_providers.flutterwave_options import resolve_flutterwave_payment_options
 from app.payment_providers.registry import get_payment_provider
 from app.services.transfer import record_status_change
 
@@ -43,6 +44,7 @@ def generate_payment_reference(
     customer_name: str,
 ) -> PaymentReference:
     provider = get_payment_provider(payment_method.provider_class)
+    payment_options = resolve_flutterwave_payment_options(payment_method.code)
     request = PaymentReferenceRequest(
         transfer_reference=transfer.reference,
         amount=transfer.total_amount_zar,
@@ -50,6 +52,7 @@ def generate_payment_reference(
         customer_name=customer_name,
         customer_email=user.email,
         customer_phone=user.mobile_number,
+        metadata={"payment_options": payment_options, "payment_method_code": payment_method.code},
     )
     result = provider.generate_reference(request)
     if not result.success:

@@ -15,11 +15,11 @@ from app.payment_providers.base import (
     WebhookResult,
 )
 
+from app.payment_providers.flutterwave_options import resolve_flutterwave_payment_options
+
 logger = logging.getLogger(__name__)
 
 FLUTTERWAVE_API = "https://api.flutterwave.com/v3"
-# SA checkout payment options supported by Flutterwave
-DEFAULT_PAYMENT_OPTIONS = "card,banktransfer,ussd,account,capitecpay,1voucher,mpesa"
 
 
 class FlutterwaveProvider(PaymentProvider):
@@ -47,12 +47,13 @@ class FlutterwaveProvider(PaymentProvider):
         return self._initiate_sandbox(request, tx_ref)
 
     def _initiate_live(self, request: PaymentReferenceRequest, tx_ref: str) -> PaymentReferenceResult:
+        payment_options = (request.metadata or {}).get("payment_options") or "card"
         payload = {
             "tx_ref": tx_ref,
             "amount": float(request.amount),
             "currency": request.currency or "ZAR",
             "redirect_url": self.redirect_url,
-            "payment_options": DEFAULT_PAYMENT_OPTIONS,
+            "payment_options": payment_options,
             "customer": {
                 "email": request.customer_email or f"{tx_ref}@ipaygo.co.za",
                 "phonenumber": request.customer_phone or "",
@@ -103,11 +104,12 @@ class FlutterwaveProvider(PaymentProvider):
                 "tx_ref": tx_ref,
                 "flw_ref": data.get("flw_ref"),
                 "mode": "live",
-                "payment_options": DEFAULT_PAYMENT_OPTIONS,
+                "payment_options": payment_options,
             },
         )
 
     def _initiate_sandbox(self, request: PaymentReferenceRequest, tx_ref: str) -> PaymentReferenceResult:
+        payment_options = (request.metadata or {}).get("payment_options") or "card"
         base = get_settings().cors_origins.split(",")[0].strip() if get_settings().cors_origins else "https://app.ipaygo.co.za"
         payment_url = f"{base}/payment/flutterwave?tx_ref={tx_ref}&amount={request.amount}"
         return PaymentReferenceResult(
@@ -118,7 +120,7 @@ class FlutterwaveProvider(PaymentProvider):
                 "payment_url": payment_url,
                 "tx_ref": tx_ref,
                 "mode": "sandbox",
-                "payment_options": DEFAULT_PAYMENT_OPTIONS,
+                "payment_options": payment_options,
                 "amount_zar": str(request.amount),
             },
         )

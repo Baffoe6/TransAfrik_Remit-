@@ -21,7 +21,7 @@ export function GeneratePaymentForm({
 
   useEffect(() => {
     api<PaymentMethod[]>("/payments/methods").then((m) => {
-      const flutterwave = m.filter((x) => x.is_active && x.code === "flutterwave");
+      const flutterwave = m.filter((x) => x.is_active && (x.code.startsWith("fw_") || x.code === "flutterwave"));
       setMethods(flutterwave);
       if (flutterwave.length) setCode(flutterwave[0].code);
     });
