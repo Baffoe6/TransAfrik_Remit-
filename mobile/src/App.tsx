@@ -12,6 +12,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAppTheme } from "./theme";
 import { PhoneVerificationGate } from "./features/auth/PhoneVerificationGate";
 import { useVerificationStatus } from "./hooks/useVerificationStatus";
+import { notificationService } from "./services/notifications";
+import { notificationsApi } from "./api/notifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +39,20 @@ function RootNav() {
   useEffect(() => {
     if (user) void sync();
   }, [user?.id, user?.phone_verified]);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const token = await notificationService.registerForPush();
+      if (token) {
+        try {
+          await notificationsApi.registerPushToken(token);
+        } catch {
+          /* non-blocking */
+        }
+      }
+    })();
+  }, [user?.id]);
 
   if (!initialized || onboardingComplete === null) {
     return (

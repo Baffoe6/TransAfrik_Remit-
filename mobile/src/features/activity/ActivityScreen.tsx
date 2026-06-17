@@ -130,7 +130,7 @@ export default function ActivityScreen() {
               <FintechCard variant="default" padding="md" style={{ marginHorizontal: spacing.lg, marginBottom: spacing.sm }}>
                 <ListItem
                   title={item.reference}
-                  subtitle={formatZAR(item.send_amount_zar)}
+                  subtitle={formatZAR(item.total_amount_zar)}
                   meta={formatDate(item.created_at)}
                   icon="swap-horizontal"
                   onPress={() => navigation.navigate("TransferTracking", { id: item.id })}

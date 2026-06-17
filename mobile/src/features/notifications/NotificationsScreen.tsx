@@ -1,43 +1,50 @@
-import { useEffect } from "react";
+import { useCallback } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, EmptyState, FintechCard, Screen } from "../../components";
 import { notificationsApi, type AppNotification } from "../../api/notifications";
-import { useNotificationInboxStore } from "../../store/notificationInboxStore";
 import { spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import { formatRelativeDate } from "../../utils/format";
 import { hapticLight } from "../../services/haptics";
+import { RootStackParamList } from "../../navigation/MainNavigator";
 
-const TYPE_ICONS: Record<AppNotification["type"], keyof typeof Ionicons.glyphMap> = {
-  transfer: "swap-horizontal",
-  kyc: "shield-checkmark",
-  promo: "gift",
-  security: "lock-closed",
-  rate: "trending-up",
-};
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function NotificationsScreen() {
   const theme = useAppTheme();
-  const inbox = useNotificationInboxStore();
-  const { load, markRead, markAllRead, items } = inbox;
+  const navigation = useNavigation<Nav>();
+  const queryClient = useQueryClient();
 
-  const { data: apiItems = [] } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationsApi.list(),
   });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const items = data?.items ?? [];
 
-  const merged = [...items, ...apiItems.filter((a) => !items.some((i) => i.id === a.id))];
+  const handlePress = useCallback(
+    async (item: AppNotification) => {
+      hapticLight();
+      if (item.read_status === "unread") {
+        await notificationsApi.markRead(item.id);
+        await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        await queryClient.invalidateQueries({ queryKey: ["notifications-unread"] });
+      }
+      if (item.transfer_id) {
+        navigation.navigate("TransferTracking", { id: item.transfer_id });
+      }
+    },
+    [navigation, queryClient],
+  );
 
-  const handleRead = async (id: string) => {
-    hapticLight();
-    await markRead(id);
-    await notificationsApi.markRead(id);
+  const markAll = async () => {
+    await notificationsApi.markAllRead();
+    await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    await queryClient.invalidateQueries({ queryKey: ["notifications-unread"] });
   };
 
   return (
@@ -45,36 +52,38 @@ export default function NotificationsScreen() {
       <View style={{ padding: spacing.lg, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <View>
           <Text style={[typography.h1, { color: theme.text }]}>Notifications</Text>
-          <Text style={[typography.caption, { color: theme.textSecondary }]}>Rate alerts · transfers · KYC · promos</Text>
+          <Text style={[typography.caption, { color: theme.textSecondary }]}>Transfer updates and alerts</Text>
         </View>
-        {merged.some((n) => !n.read) && (
-          <Button title="Mark all read" onPress={markAllRead} variant="ghost" size="md" />
-        )}
+        {(data?.unread_count ?? 0) > 0 && <Button title="Mark all read" onPress={markAll} variant="ghost" size="md" />}
       </View>
 
       <FlatList
-        data={merged}
-        keyExtractor={(n) => n.id}
+        data={items}
+        keyExtractor={(n) => String(n.id)}
+        refreshing={isLoading}
+        onRefresh={() => queryClient.invalidateQueries({ queryKey: ["notifications"] })}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl, flexGrow: 1 }}
         ListEmptyComponent={
-          <EmptyState
-            title="No notifications yet"
-            message="Transfer updates, rate alerts, KYC results, and security alerts will appear here."
-          />
+          !isLoading ? (
+            <EmptyState title="No notifications yet" message="Transfer status updates will appear here as your money moves." />
+          ) : null
         }
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => handleRead(item.id)} activeOpacity={0.8}>
-            <FintechCard variant={item.read ? "muted" : "accent"} padding="md" style={{ marginBottom: spacing.sm }}>
+          <TouchableOpacity onPress={() => handlePress(item)} activeOpacity={0.8}>
+            <FintechCard variant={item.read_status === "read" ? "muted" : "accent"} padding="md" style={{ marginBottom: spacing.sm }}>
               <View style={{ flexDirection: "row", gap: spacing.md }}>
                 <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.primaryMuted, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name={TYPE_ICONS[item.type]} size={20} color={theme.primary} />
+                  <Ionicons name="swap-horizontal" size={20} color={theme.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={[typography.bodyBold, { color: theme.text }]}>{item.title}</Text>
-                    {!item.read && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.accent }} />}
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <Text style={[typography.bodyBold, { color: theme.text, flex: 1 }]}>{item.title}</Text>
+                    {item.read_status === "unread" && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.accent, marginLeft: 8 }} />}
                   </View>
-                  <Text style={[typography.bodySm, { color: theme.textSecondary, marginTop: 2 }]}>{item.body}</Text>
+                  <Text style={[typography.bodySm, { color: theme.textSecondary, marginTop: 2 }]}>{item.message}</Text>
+                  {item.transfer_reference ? (
+                    <Text style={[typography.caption, { color: theme.primary, marginTop: 4 }]}>{item.transfer_reference}</Text>
+                  ) : null}
                   <Text style={[typography.caption, { color: theme.textTertiary, marginTop: 4 }]}>{formatRelativeDate(item.created_at)}</Text>
                 </View>
               </View>

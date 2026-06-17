@@ -22,7 +22,7 @@ import {
   LiveCalculator,
   RateAlertWidget,
 } from "../../components/worldclass";
-import { dashboardApi, beneficiariesApi } from "../../api";
+import { dashboardApi, beneficiariesApi, notificationsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import { useCalculatorStore } from "../../store/calculatorStore";
 import { useRateAlertStore } from "../../store/rateAlertStore";
@@ -56,6 +56,12 @@ export default function HomeScreen() {
     loadSettings();
     loadAlerts();
   }, [loadSettings, loadAlerts]);
+
+  const { data: notificationSummary } = useQuery({
+    queryKey: ["notifications-unread"],
+    queryFn: () => notificationsApi.unreadCount(),
+    refetchInterval: 60000,
+  });
 
   const { data: summary, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard"],
@@ -127,7 +133,11 @@ export default function HomeScreen() {
           greeting={greetingName(user?.first_name)}
           title="TransAfrik"
           subtitle={`Send to ${corridor?.name ?? "Africa"} — live rates & tracking`}
-          rightAction={{ icon: "notifications-outline", onPress: () => navigation.navigate("Notifications") }}
+          rightAction={{
+            icon: "notifications-outline",
+            onPress: () => navigation.navigate("Notifications"),
+            badge: (notificationSummary ?? 0) > 0 ? String(notificationSummary) : undefined,
+          }}
         >
           <TrustBadge items={["Secure verification", "Partner payouts", "Encrypted"]} />
         </HeroHeader>

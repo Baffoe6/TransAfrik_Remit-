@@ -11,13 +11,12 @@ import {
   Screen,
   StepIndicator,
 } from "../../components";
-import { LiveCalculator } from "../../components/worldclass";
+import { LiveCalculator, CustomerQuoteSummary } from "../../components/worldclass";
 import { beneficiariesApi, paymentsApi, transfersApi } from "../../api";
 import { useSendFlowStore } from "../../store/sendFlowStore";
 import { useTemplateStore } from "../../store/templateStore";
 import { useLiveQuote } from "../../hooks/useLiveQuote";
 import { CORRIDORS, PAYOUT_PARTNERS } from "../../utils/constants";
-import { formatForeign, formatZAR } from "../../utils/format";
 import { radius, spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
 import { RootStackParamList } from "../../navigation/MainNavigator";
@@ -117,7 +116,7 @@ export default function SendFlowScreen({ navigation }: Props) {
     try {
       const { data } = await transfersApi.create({
         beneficiary_id: flow.beneficiary.id,
-        send_amount_zar: flow.amount,
+        amount_to_pay_zar: flow.amount,
         payment_method_code: flow.paymentMethod.code,
       });
       flow.setTransferId(data.id);
@@ -134,7 +133,7 @@ export default function SendFlowScreen({ navigation }: Props) {
     if (flow.step === 2) {
       const numeric = parseFloat(flow.amount);
       if (Number.isNaN(numeric) || numeric < 50) {
-        setError("Minimum send amount is R50");
+        setError("Minimum amount to pay is R50");
         return;
       }
       if (!flow.quote && !liveQuote) {
@@ -168,6 +167,12 @@ export default function SendFlowScreen({ navigation }: Props) {
     });
     setTemplateName("");
     hapticSuccess();
+  };
+
+  const deliveryMethodLabel = (type: string) => {
+    if (type === "bank_account") return "Bank Transfer";
+    if (type === "cash_pickup") return "Cash Pickup";
+    return "Mobile Money";
   };
 
   return (
@@ -261,13 +266,15 @@ export default function SendFlowScreen({ navigation }: Props) {
         <FintechCard variant="elevated">
           <Text style={[typography.label, { color: theme.textTertiary, marginBottom: spacing.md }]}>Transfer summary</Text>
           <ListItem title={flow.beneficiary.full_name} subtitle="Recipient" avatarName={flow.beneficiary.full_name} showChevron={false} style={{ paddingHorizontal: 0, backgroundColor: "transparent" }} />
-          <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
-            <Row label="You send" value={formatZAR(flow.quote.send_amount_zar)} />
-            <Row label="Fee" value={formatZAR(flow.quote.fee_zar)} />
-            <Row label="Rate" value={`1 ZAR = ${flow.quote.exchange_rate} ${flow.currency}`} />
-            <Row label="They receive" value={formatForeign(flow.quote.receive_amount_ghs, flow.currency)} highlight />
-            <Row label="Payment" value={flow.paymentMethod.name} />
-            <Row label="Delivery" value={corridor?.eta ?? "Same day"} />
+          <View style={{ marginTop: spacing.md }}>
+            <CustomerQuoteSummary
+              quote={flow.quote}
+              currency={flow.currency}
+              deliveryMethod={deliveryMethodLabel(flow.beneficiary.beneficiary_type)}
+              estimatedDelivery={corridor?.eta ?? flow.quote.estimated_delivery}
+            />
+            <View style={{ height: 1, backgroundColor: theme.borderLight, marginVertical: spacing.md }} />
+            <Row label="Payment method" value={flow.paymentMethod.name} />
           </View>
           {partner && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.md, padding: spacing.sm, backgroundColor: theme.primaryMuted, borderRadius: radius.md }}>

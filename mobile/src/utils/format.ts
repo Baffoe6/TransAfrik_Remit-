@@ -10,6 +10,12 @@ export function formatForeign(amount: string | number | null | undefined, curren
   return `${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 }
 
+export function formatExchangeRate(rate: string | number, fromCurrency: string, toCurrency: string): string {
+  const n = parseFloat(String(rate));
+  if (Number.isNaN(n)) return `1 ${fromCurrency} = — ${toCurrency}`;
+  return `1 ${fromCurrency} = ${n.toFixed(4)} ${toCurrency}`;
+}
+
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-ZA", {

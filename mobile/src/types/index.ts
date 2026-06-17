@@ -66,6 +66,8 @@ export interface Transfer {
   total_amount_zar: string;
   created_at: string;
   completed_at: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
 }
 
 export interface TransferDetail extends Transfer {

@@ -72,6 +72,10 @@ export interface Transfer {
   exchange_rate: string;
   receive_amount_ghs: string;
   total_amount_zar: string;
+  provider_cost_zar?: string | null;
+  fx_margin_zar?: string | null;
+  net_revenue_zar?: string | null;
+  corridor_fee_tier_id?: number | null;
   aml_flags: AmlFlag[] | null;
   risk_score: number;
   compliance_approved: boolean;
@@ -81,6 +85,8 @@ export interface Transfer {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
   payment_reference?: PaymentReferenceBrief | null;
   timeline?: TimelineEvent[];
 }
@@ -98,13 +104,18 @@ export interface AmlFlag {
 }
 
 export interface CalculatorResult {
-  send_amount_zar: string;
+  amount_to_pay_zar: string;
   fee_zar: string;
   exchange_rate: string;
+  customer_rate: string;
+  receive_amount: string;
   receive_amount_ghs: string;
   total_amount_zar: string;
   from_currency: string;
   to_currency: string;
+  corridor_code?: string;
+  delivery_method: string;
+  estimated_delivery: string;
 }
 
 export interface KycDocument {
@@ -255,6 +266,29 @@ export interface FeeRuleV2 {
   provider_id: number | null;
   priority: number;
   is_active: boolean;
+}
+
+export interface CorridorFeeTier {
+  id: number;
+  min_amount_zar: string;
+  max_amount_zar: string | null;
+  fee_zar: string;
+  label: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface CorridorFeeRule {
+  id: number;
+  corridor_code: string;
+  source_country: string;
+  destination_country: string;
+  name: string;
+  provider_cost_pct: string;
+  provider_cost_flat_zar: string | null;
+  is_active: boolean;
+  priority: number;
+  tiers: CorridorFeeTier[];
 }
 
 export interface PaymentDashboardStats {

@@ -10,6 +10,13 @@ import { api, downloadFile } from "@/lib/api";
 import type { Transfer } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+const CANCELLATION_LABELS: Record<string, string> = {
+  customer_cancelled: "Customer cancelled",
+  expired_unpaid_24h: "Expired unpaid (24h)",
+  admin_cancelled: "Admin cancelled",
+  late_payment_received: "Late payment after cancel",
+};
+
 function TransfersContent() {
   const searchParams = useSearchParams();
   const statusFilter = searchParams.get("status") || "";
@@ -78,7 +85,12 @@ function TransfersContent() {
                 <tr className="border-b text-left text-gray-500">
                   <th className="pb-3 pr-2" />
                   <th className="pb-3 pr-4">Reference</th>
-                  <th className="pb-3 pr-4">Amount</th>
+                  <th className="pb-3 pr-4">Paid</th>
+                  <th className="pb-3 pr-4">Fee</th>
+                  <th className="pb-3 pr-4">FX margin</th>
+                  <th className="pb-3 pr-4">Provider cost</th>
+                  <th className="pb-3 pr-4">Net revenue</th>
+                  <th className="pb-3 pr-4">Cancellation</th>
                   <th className="pb-3 pr-4">Status</th>
                   <th className="pb-3 pr-4">Risk</th>
                   <th className="pb-3">Actions</th>
@@ -94,11 +106,19 @@ function TransfersContent() {
                       <p className="font-medium">{t.reference}</p>
                       <p className="text-xs text-gray-400">{formatDate(t.created_at)}</p>
                     </td>
-                    <td className="py-3 pr-4">{formatCurrency(t.send_amount_zar, "ZAR")}</td>
+                    <td className="py-3 pr-4">{formatCurrency(t.total_amount_zar, "ZAR")}</td>
+                    <td className="py-3 pr-4">{formatCurrency(t.fee_zar, "ZAR")}</td>
+                    <td className="py-3 pr-4">{t.fx_margin_zar ? formatCurrency(t.fx_margin_zar, "ZAR") : "—"}</td>
+                    <td className="py-3 pr-4">{t.provider_cost_zar ? formatCurrency(t.provider_cost_zar, "ZAR") : "—"}</td>
+                    <td className="py-3 pr-4 font-medium text-[#1B5E3B]">{t.net_revenue_zar ? formatCurrency(t.net_revenue_zar, "ZAR") : "—"}</td>
+                    <td className="py-3 pr-4 text-xs text-gray-600">
+                      {t.cancellation_reason ? CANCELLATION_LABELS[t.cancellation_reason] ?? t.cancellation_reason : "—"}
+                    </td>
                     <td className="py-3 pr-4"><StatusBadge status={t.status} /></td>
                     <td className="py-3 pr-4">{t.risk_score || "—"}</td>
                     <td className="py-3">
                       <div className="flex flex-wrap gap-1">
+                        <a href={`/admin/transfers/${t.id}`} className="text-xs text-[#1B5E3B] hover:underline">Details</a>
                         {t.status === "payment_pending_verification" && (
                           <Button size="sm" variant="outline" onClick={() => verifyPayment(t.id)}>Verify</Button>
                         )}

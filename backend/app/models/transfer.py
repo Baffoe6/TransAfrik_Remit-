@@ -25,6 +25,12 @@ class Transfer(Base):
     exchange_rate: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
     receive_amount_ghs: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     total_amount_zar: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    provider_cost_zar: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    fx_margin_zar: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    net_revenue_zar: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    corridor_fee_tier_id: Mapped[int | None] = mapped_column(
+        ForeignKey("corridor_fee_tiers.id", ondelete="SET NULL")
+    )
     aml_flags: Mapped[dict | None] = mapped_column(JSONB)
     risk_score: Mapped[int] = mapped_column(Integer, default=0)
     compliance_approved: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -38,6 +44,8 @@ class Transfer(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancellation_reason: Mapped[str | None] = mapped_column(String(50), index=True)
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="transfers")
     compliance_approved_by_user: Mapped["User | None"] = relationship(

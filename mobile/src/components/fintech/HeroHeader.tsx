@@ -9,7 +9,7 @@ interface HeroHeaderProps {
   greeting?: string;
   title: string;
   subtitle?: string;
-  rightAction?: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void };
+  rightAction?: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void; badge?: string };
   children?: React.ReactNode;
   compact?: boolean;
 }
@@ -54,6 +54,24 @@ export function HeroHeader({ greeting, title, subtitle, rightAction, children, c
             }}
           >
             <Ionicons name={rightAction.icon} size={22} color="#fff" />
+            {rightAction.badge ? (
+              <View
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  right: 4,
+                  minWidth: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: theme.accent,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text style={{ color: "#1B5E3B", fontSize: 10, fontWeight: "800" }}>{rightAction.badge}</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         ) : null}
       </View>

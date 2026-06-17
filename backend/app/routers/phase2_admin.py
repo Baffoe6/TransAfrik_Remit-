@@ -12,6 +12,7 @@ from app.database import get_db
 from app.dependencies import get_client_ip, require_roles
 from app.models.compliance import EnhancedDueDiligenceCase
 from app.models.enums import EddStatus, UserRole
+from app.models.corridor_fee import CorridorFeeRule, CorridorFeeTier
 from app.models.fee_rule import FeeRule
 from app.models.notification import NotificationLog, NotificationTemplate
 from app.models.security import SecurityAuditLog, UserMfa, UserSession
@@ -44,6 +45,42 @@ class FeeRuleCreateV2(BaseModel):
     payment_method_id: int | None = None
     provider_id: int | None = None
     priority: int = 0
+
+
+class CorridorFeeTierCreate(BaseModel):
+    min_amount_zar: Decimal = Field(ge=0)
+    max_amount_zar: Decimal | None = None
+    fee_zar: Decimal = Field(gt=0)
+    label: str | None = None
+    sort_order: int = 0
+
+
+class CorridorFeeRuleCreate(BaseModel):
+    corridor_code: str
+    source_country: str = "ZA"
+    destination_country: str
+    name: str
+    provider_cost_pct: Decimal = Field(default=Decimal("1.5"), ge=0)
+    provider_cost_flat_zar: Decimal | None = None
+    priority: int = 0
+    tiers: list[CorridorFeeTierCreate] = Field(default_factory=list)
+
+
+class CorridorFeeTierUpdate(BaseModel):
+    min_amount_zar: Decimal | None = None
+    max_amount_zar: Decimal | None = None
+    fee_zar: Decimal | None = None
+    label: str | None = None
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
+class CorridorFeeRuleUpdate(BaseModel):
+    name: str | None = None
+    provider_cost_pct: Decimal | None = None
+    provider_cost_flat_zar: Decimal | None = None
+    is_active: bool | None = None
+    priority: int | None = None
 
 
 class ProviderConfigUpdate(BaseModel):
@@ -125,6 +162,141 @@ def list_fees_v2(admin: AdminUser, db: Annotated[Session, Depends(get_db)]):
         }
         for r in rules
     ]
+
+
+def _serialize_corridor_fee_rule(rule: CorridorFeeRule) -> dict:
+    return {
+        "id": rule.id,
+        "corridor_code": rule.corridor_code,
+        "source_country": rule.source_country,
+        "destination_country": rule.destination_country,
+        "name": rule.name,
+        "provider_cost_pct": str(rule.provider_cost_pct),
+        "provider_cost_flat_zar": str(rule.provider_cost_flat_zar) if rule.provider_cost_flat_zar else None,
+        "is_active": rule.is_active,
+        "priority": rule.priority,
+        "tiers": [
+            {
+                "id": t.id,
+                "min_amount_zar": str(t.min_amount_zar),
+                "max_amount_zar": str(t.max_amount_zar) if t.max_amount_zar is not None else None,
+                "fee_zar": str(t.fee_zar),
+                "label": t.label,
+                "sort_order": t.sort_order,
+                "is_active": t.is_active,
+            }
+            for t in sorted(rule.tiers, key=lambda x: x.sort_order)
+        ],
+    }
+
+
+@router.get("/corridor-fee-rules")
+def list_corridor_fee_rules(admin: AdminUser, db: Annotated[Session, Depends(get_db)]):
+    rules = (
+        db.query(CorridorFeeRule)
+        .order_by(CorridorFeeRule.priority.desc(), CorridorFeeRule.corridor_code.asc())
+        .all()
+    )
+    return [_serialize_corridor_fee_rule(r) for r in rules]
+
+
+@router.post("/corridor-fee-rules", status_code=201)
+def create_corridor_fee_rule(
+    data: CorridorFeeRuleCreate,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+):
+    rule = CorridorFeeRule(
+        corridor_code=data.corridor_code.upper(),
+        source_country=data.source_country.upper(),
+        destination_country=data.destination_country.upper(),
+        name=data.name,
+        provider_cost_pct=data.provider_cost_pct,
+        provider_cost_flat_zar=data.provider_cost_flat_zar,
+        priority=data.priority,
+        is_active=True,
+    )
+    db.add(rule)
+    db.flush()
+    for idx, tier in enumerate(data.tiers):
+        db.add(
+            CorridorFeeTier(
+                rule_id=rule.id,
+                min_amount_zar=tier.min_amount_zar,
+                max_amount_zar=tier.max_amount_zar,
+                fee_zar=tier.fee_zar,
+                label=tier.label,
+                sort_order=tier.sort_order if tier.sort_order else idx,
+                is_active=True,
+            )
+        )
+    db.commit()
+    db.refresh(rule)
+    return _serialize_corridor_fee_rule(rule)
+
+
+@router.patch("/corridor-fee-rules/{rule_id}")
+def update_corridor_fee_rule(
+    rule_id: int,
+    data: CorridorFeeRuleUpdate,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+):
+    rule = db.query(CorridorFeeRule).filter(CorridorFeeRule.id == rule_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Corridor fee rule not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(rule, field, value)
+    db.commit()
+    db.refresh(rule)
+    return _serialize_corridor_fee_rule(rule)
+
+
+@router.post("/corridor-fee-rules/{rule_id}/tiers", status_code=201)
+def add_corridor_fee_tier(
+    rule_id: int,
+    data: CorridorFeeTierCreate,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+):
+    rule = db.query(CorridorFeeRule).filter(CorridorFeeRule.id == rule_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Corridor fee rule not found")
+    tier = CorridorFeeTier(
+        rule_id=rule.id,
+        min_amount_zar=data.min_amount_zar,
+        max_amount_zar=data.max_amount_zar,
+        fee_zar=data.fee_zar,
+        label=data.label,
+        sort_order=data.sort_order,
+        is_active=True,
+    )
+    db.add(tier)
+    db.commit()
+    db.refresh(tier)
+    return {
+        "id": tier.id,
+        "min_amount_zar": str(tier.min_amount_zar),
+        "max_amount_zar": str(tier.max_amount_zar) if tier.max_amount_zar else None,
+        "fee_zar": str(tier.fee_zar),
+        "label": tier.label,
+    }
+
+
+@router.patch("/corridor-fee-tiers/{tier_id}")
+def update_corridor_fee_tier(
+    tier_id: int,
+    data: CorridorFeeTierUpdate,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+):
+    tier = db.query(CorridorFeeTier).filter(CorridorFeeTier.id == tier_id).first()
+    if not tier:
+        raise HTTPException(status_code=404, detail="Fee tier not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(tier, field, value)
+    db.commit()
+    return {"message": "Tier updated", "id": tier.id}
 
 
 @router.get("/compliance/edd")

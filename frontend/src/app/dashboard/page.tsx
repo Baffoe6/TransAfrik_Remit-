@@ -177,7 +177,7 @@ export default function CustomerDashboard() {
                       <p className="text-sm text-gray-500">{t.created_at ? formatDate(t.created_at) : "—"}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(t.send_amount_zar, "ZAR")}</p>
+                      <p className="font-semibold">{formatCurrency(t.total_amount_zar, "ZAR")}</p>
                       <StatusBadge status={t.status} />
                     </div>
                   </Link>

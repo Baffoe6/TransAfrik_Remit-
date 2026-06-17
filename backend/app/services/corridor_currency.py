@@ -20,6 +20,15 @@ COUNTRY_CURRENCY_MAP: dict[str, tuple[str, str]] = {
 }
 
 # Approximate demo rates when DB has no row (seed/migration should populate real rates)
+CORRIDOR_DELIVERY: dict[str, dict[str, str]] = {
+    "GH": {"delivery_method": "Mobile Money", "estimated_delivery": "Same day"},
+    "ZW": {"delivery_method": "Cash / Wallet", "estimated_delivery": "1–2 business days"},
+    "ZM": {"delivery_method": "Mobile Money", "estimated_delivery": "Same day"},
+    "KE": {"delivery_method": "Mobile Money", "estimated_delivery": "Same day"},
+    "NG": {"delivery_method": "Bank / Wallet", "estimated_delivery": "1–2 business days"},
+    "UG": {"delivery_method": "Mobile Money", "estimated_delivery": "Same day"},
+}
+
 FALLBACK_RATES: dict[tuple[str, str], Decimal] = {
     ("ZAR", "GHS"): Decimal("0.72"),
     ("ZAR", "KES"): Decimal("7.15"),
@@ -59,3 +68,11 @@ def resolve_corridor_currencies(
         return pair[0], pair[1], None
 
     return "ZAR", "GHS", None
+
+
+def resolve_corridor_delivery(destination_country: str) -> dict[str, str]:
+    """Customer-facing delivery metadata for a corridor."""
+    return CORRIDOR_DELIVERY.get(
+        destination_country.upper(),
+        {"delivery_method": "Mobile Money", "estimated_delivery": "1–2 business days"},
+    )

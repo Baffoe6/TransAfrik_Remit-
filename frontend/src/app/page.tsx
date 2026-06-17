@@ -91,13 +91,14 @@ export default function LandingPage() {
                 <CardDescription>Illustrative rates — register for live pricing</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between"><span>You send</span><span className="font-semibold">R 1,000.00</span></div>
-                <div className="flex justify-between"><span>Fee</span><span className="font-semibold">R 49.00</span></div>
-                <div className="flex justify-between"><span>Rate</span><span className="font-semibold">1 ZAR = 0.72 GHS</span></div>
+                <div className="flex justify-between font-semibold"><span>Amount to pay</span><span>R 1,000.00</span></div>
+                <div className="flex justify-between pl-3 text-sm text-gray-600"><span>Includes transfer fee</span><span>R 49.00</span></div>
+                <div className="flex justify-between"><span>Exchange rate</span><span>1 ZAR = 0.7200 GHS</span></div>
                 <div className="border-t pt-3 flex justify-between text-[#1B5E3B]">
                   <span className="font-medium">Recipient receives</span>
-                  <span className="text-xl font-bold">₵ 720.00</span>
+                  <span className="text-xl font-bold">₵ 684.72</span>
                 </div>
+                <p className="text-xs text-gray-500">Final amount — no extra charges at checkout</p>
               </CardContent>
             </Card>
           </div>

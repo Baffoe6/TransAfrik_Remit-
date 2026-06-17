@@ -50,7 +50,9 @@ from app.models import (  # noqa: F401
 
     MukuruSettlement,
 
-    NotificationLog,
+    UserNotification,
+
+    NotificationDelivery,
 
     NotificationTemplate,
 
@@ -93,6 +95,10 @@ from app.models import (  # noqa: F401
     WebhookEvent,
 
     Corridor,
+
+    CorridorFeeRule,
+
+    CorridorFeeTier,
 
     CorridorProviderRoute,
 

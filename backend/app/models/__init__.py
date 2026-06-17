@@ -3,9 +3,11 @@ from app.models.beneficiary import Beneficiary
 from app.models.compliance import CustomerRiskProfile, EnhancedDueDiligenceCase, SanctionsScreening
 from app.models.customer_profile import CustomerProfile
 from app.models.exchange_rate import ExchangeRate, ExchangeRateHistory
+from app.models.corridor_fee import CorridorFeeRule, CorridorFeeTier
 from app.models.fee_rule import FeeRule
 from app.models.kyc_document import KycDocument
 from app.models.notification import NotificationLog, NotificationTemplate
+from app.models.user_notification import NotificationDelivery, UserNotification
 from app.models.payment_event import PaymentEvent
 from app.models.payment_method import PaymentMethod
 from app.models.payment_proof import PaymentProof
@@ -55,6 +57,8 @@ __all__ = [
     "ExchangeRate",
     "ExchangeRateHistory",
     "FeeRule",
+    "CorridorFeeRule",
+    "CorridorFeeTier",
     "AuditLog",
     "SupportTicket",
     "NotificationTemplate",

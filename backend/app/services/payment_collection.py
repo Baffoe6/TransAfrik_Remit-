@@ -76,8 +76,12 @@ def generate_payment_reference(
     db.add(payment_ref)
     transfer.payment_method_id = payment_method.id
 
-    if transfer.status == TransferStatus.DRAFT:
-        record_status_change(db, transfer, TransferStatus.AWAITING_PAYMENT, notes="Payment reference generated")
+    if transfer.status in (TransferStatus.DRAFT, TransferStatus.QUOTE_CREATED):
+        if payment_method.provider == "flutterwave":
+            next_status = TransferStatus.CHECKOUT_CREATED
+        else:
+            next_status = TransferStatus.AWAITING_PAYMENT
+        record_status_change(db, transfer, next_status, notes="Payment reference generated")
 
     log_payment_event(
         db,

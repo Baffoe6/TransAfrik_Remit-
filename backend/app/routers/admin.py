@@ -47,6 +47,8 @@ from app.schemas.admin import (
 from app.schemas.beneficiary import BeneficiaryResponse
 from app.schemas.kyc import KycDocumentResponse
 from app.schemas.payment import ComplianceQueueItem, PaymentDashboardStats, PaymentVerificationRequest
+from app.models.user_notification import NotificationDelivery, UserNotification
+from app.schemas.notification import NotificationDeliveryResponse, NotificationResponse, TransferNotificationFeedItem
 from app.schemas.transfer import TransferResponse, TransferStatusUpdate
 from app.services.audit import log_action
 from app.services.payment_collection import _route_after_payment_verified, expire_stale_references, log_payment_event
@@ -301,6 +303,39 @@ def get_transfer_admin(transfer_id: int, admin: AdminUser, db: Annotated[Session
     if not transfer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer not found")
     return transfer
+
+
+@router.get("/transfers/{transfer_id}/notifications", response_model=list[TransferNotificationFeedItem])
+def get_transfer_notifications_admin(
+    transfer_id: int,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+):
+    transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
+    if not transfer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transfer not found")
+
+    notifications = (
+        db.query(UserNotification)
+        .filter(UserNotification.transfer_id == transfer_id)
+        .order_by(UserNotification.created_at.desc())
+        .all()
+    )
+    feed: list[TransferNotificationFeedItem] = []
+    for n in notifications:
+        deliveries = (
+            db.query(NotificationDelivery)
+            .filter(NotificationDelivery.notification_id == n.id)
+            .order_by(NotificationDelivery.created_at.asc())
+            .all()
+        )
+        feed.append(
+            TransferNotificationFeedItem(
+                notification=NotificationResponse.model_validate(n),
+                deliveries=[NotificationDeliveryResponse.model_validate(d) for d in deliveries],
+            )
+        )
+    return feed
 
 
 @router.patch("/transfers/{transfer_id}/status")

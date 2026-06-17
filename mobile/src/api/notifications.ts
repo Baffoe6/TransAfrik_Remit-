@@ -1,43 +1,43 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiClient } from "./client";
 
 export interface AppNotification {
-  id: string;
-  type: "transfer" | "kyc" | "promo" | "security" | "rate";
+  id: number;
+  notification_type: string;
+  event_code: string;
   title: string;
-  body: string;
-  read: boolean;
+  message: string;
+  transfer_id: number | null;
+  transfer_reference: string | null;
+  read_status: "unread" | "read";
   created_at: string;
+  read_at?: string | null;
 }
 
-const INBOX_KEY = "notification_inbox";
-
-async function loadLocalInbox(): Promise<AppNotification[]> {
-  const raw = await AsyncStorage.getItem(INBOX_KEY);
-  return raw ? JSON.parse(raw) : [];
+export interface NotificationListResponse {
+  items: AppNotification[];
+  unread_count: number;
 }
 
-// Local inbox + seed demo notifications until backend API ships
 export const notificationsApi = {
-  list: async (): Promise<AppNotification[]> => {
-    const items = await loadLocalInbox();
-    if (items.length) return items;
-    const seeded: AppNotification[] = [
-      { id: "seed_1", type: "rate", title: "Rate alert", body: "ZA→Ghana rate improved — send now to lock in", read: false, created_at: new Date().toISOString() },
-      { id: "seed_2", type: "promo", title: "Refer & earn R50", body: "Invite a friend and both get R50 off your next transfer", read: false, created_at: new Date(Date.now() - 86400000).toISOString() },
-    ];
-    await AsyncStorage.setItem(INBOX_KEY, JSON.stringify(seeded));
-    return seeded;
+  list: async (): Promise<NotificationListResponse> => {
+    const { data } = await apiClient.get<NotificationListResponse>("/notifications");
+    return data;
   },
-  markRead: async (id: string) => {
-    const items = await loadLocalInbox();
-    const next = items.map((i) => (i.id === id ? { ...i, read: true } : i));
-    await AsyncStorage.setItem(INBOX_KEY, JSON.stringify(next));
+  unreadCount: async (): Promise<number> => {
+    const { data } = await apiClient.get<NotificationListResponse>("/notifications", { params: { limit: 1 } });
+    return data.unread_count;
+  },
+  markRead: async (id: number) => {
+    await apiClient.post(`/notifications/${id}/read`);
   },
   markAllRead: async () => {
-    const items = await loadLocalInbox();
-    const next = items.map((i) => ({ ...i, read: true }));
-    await AsyncStorage.setItem(INBOX_KEY, JSON.stringify(next));
+    await apiClient.post("/notifications/read-all");
+  },
+  registerPushToken: async (pushToken: string, enabled = true) => {
+    await apiClient.post("/notifications/push-token", {
+      push_token: pushToken,
+      push_notifications_enabled: enabled,
+    });
   },
 };
 

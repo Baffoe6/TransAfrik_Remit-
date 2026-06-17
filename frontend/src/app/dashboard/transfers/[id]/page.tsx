@@ -13,11 +13,27 @@ import { api, apiUpload, getApiBaseUrl } from "@/lib/api";
 import type { Transfer } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+const UNPAID_CANCELLABLE = new Set([
+  "quote_created",
+  "draft",
+  "awaiting_payment",
+  "payment_pending",
+  "checkout_created",
+]);
+
+const CANCELLATION_LABELS: Record<string, string> = {
+  customer_cancelled: "Customer cancelled",
+  expired_unpaid_24h: "Expired unpaid after 24 hours",
+  admin_cancelled: "Admin cancelled",
+  late_payment_received: "Late payment received after cancellation",
+};
+
 export default function TransferDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
@@ -63,12 +79,31 @@ export default function TransferDetailPage() {
     load();
   };
 
+  const cancelTransfer = async () => {
+    if (!confirm("Only unpaid transfers can be cancelled. If you have already made payment, please do not cancel and contact support.")) {
+      return;
+    }
+    setCancelling(true);
+    try {
+      await api(`/transfers/${id}/cancel`, { method: "POST" });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not cancel transfer");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (error) return <p className="text-red-600">{error}</p>;
   if (!transfer) return <p className="text-gray-500">Loading transfer...</p>;
 
   const ref = transfer.payment_reference;
   const canUpload = ["awaiting_payment", "payment_pending_verification"].includes(transfer.status);
-  const needsPayment = transfer.status === "draft" && !ref;
+  const needsPayment = ["draft", "quote_created"].includes(transfer.status) && !ref;
+  const canCancel = UNPAID_CANCELLABLE.has(transfer.status);
+  const cancellationLabel = transfer.cancellation_reason
+    ? CANCELLATION_LABELS[transfer.cancellation_reason] ?? transfer.cancellation_reason
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -77,14 +112,24 @@ export default function TransferDetailPage() {
         <StatusBadge status={transfer.status} />
       </div>
 
+      {transfer.status === "cancelled" && transfer.cancellation_reason === "expired_unpaid_24h" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Cancelled automatically because payment was not received within 24 hours.
+        </div>
+      )}
+
+      {cancellationLabel && transfer.status === "cancelled" && (
+        <p className="text-sm text-gray-600">{cancellationLabel}</p>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Transfer Details</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Created</span><span>{formatDate(transfer.created_at)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Send</span><span>{formatCurrency(transfer.send_amount_zar, "ZAR")}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Fee</span><span>{formatCurrency(transfer.fee_zar, "ZAR")}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Total to Pay</span><span className="font-semibold">{formatCurrency(transfer.total_amount_zar, "ZAR")}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Amount paid</span><span className="font-semibold">{formatCurrency(transfer.total_amount_zar, "ZAR")}</span></div>
+            <div className="flex justify-between pl-3 text-gray-500"><span>Includes transfer fee</span><span>{formatCurrency(transfer.fee_zar, "ZAR")}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Exchange rate</span><span>1 ZAR = {parseFloat(transfer.exchange_rate).toFixed(4)} GHS</span></div>
             <div className="flex justify-between border-t pt-3">
               <span className="font-medium text-[#1B5E3B]">Recipient Receives</span>
               <span className="text-lg font-bold">{formatCurrency(transfer.receive_amount_ghs, "GHS")}</span>
@@ -120,6 +165,20 @@ export default function TransferDetailPage() {
             <ul className="space-y-1 text-sm text-amber-700">
               {transfer.aml_flags.map((f, i) => <li key={i}>• {f.message}</li>)}
             </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {canCancel && (
+        <Card>
+          <CardHeader><CardTitle>Cancel transfer</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Only unpaid transfers can be cancelled. If you have already made payment, please do not cancel and contact support.
+            </p>
+            <Button variant="outline" onClick={cancelTransfer} disabled={cancelling}>
+              {cancelling ? "Cancelling…" : "Cancel transfer"}
+            </Button>
           </CardContent>
         </Card>
       )}

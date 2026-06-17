@@ -6,7 +6,7 @@ import QRCode from "react-native-qrcode-svg";
 import * as Sharing from "expo-sharing";
 import { AmountDisplay, Button, FintechCard, LoadingState, Screen, StatusPill, Timeline } from "../../components";
 import { transfersApi } from "../../api";
-import { formatDate, formatForeign, formatZAR } from "../../utils/format";
+import { formatDate, formatForeign, formatZAR, formatExchangeRate } from "../../utils/format";
 import { TRANSFER_STATUS_LABELS } from "../../utils/constants";
 import { spacing, useAppTheme } from "../../theme";
 import { typography } from "../../theme/typography";
@@ -21,12 +21,11 @@ function buildReceiptText(transfer: NonNullable<Awaited<ReturnType<typeof transf
     `Reference: ${transfer.reference}`,
     `Status: ${TRANSFER_STATUS_LABELS[transfer.status] ?? transfer.status}`,
     `Date: ${formatDate(transfer.created_at)}`,
-    `Amount sent: ${formatZAR(transfer.send_amount_zar)}`,
+    `Amount paid: ${formatZAR(transfer.total_amount_zar)}`,
+    `Includes transfer fee: ${formatZAR(transfer.fee_zar)}`,
     `Recipient: ${transfer.beneficiary?.full_name ?? "—"}`,
     `Received: ${formatForeign(transfer.receive_amount_ghs, "GHS")}`,
-    `Fee: ${formatZAR(transfer.fee_zar)}`,
     `Rate: ${transfer.exchange_rate}`,
-    `Total paid: ${formatZAR(transfer.total_amount_zar)}`,
     "",
     "Verify at app.ipaygo.co.za",
   ].join("\n");
@@ -102,15 +101,13 @@ export default function ReceiptScreen({ route }: Props) {
           <Text style={[typography.caption, { color: theme.textTertiary, marginTop: spacing.sm }]}>Scan to verify</Text>
         </View>
 
-        <AmountDisplay amount={formatZAR(transfer.send_amount_zar)} label="Amount sent" size="sm" />
+        <AmountDisplay amount={formatZAR(transfer.total_amount_zar)} label="Amount paid" sublabel={`Includes transfer fee ${formatZAR(transfer.fee_zar)}`} size="sm" />
         <View style={{ height: 1, backgroundColor: theme.borderLight, marginVertical: spacing.md }} />
         <AmountDisplay amount={formatForeign(transfer.receive_amount_ghs, "GHS")} label="Recipient received" size="sm" />
 
         <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
           <Row label="Date" value={formatDate(transfer.created_at)} />
-          <Row label="Fee" value={formatZAR(transfer.fee_zar)} />
-          <Row label="Exchange rate" value={String(transfer.exchange_rate)} />
-          <Row label="Total paid" value={formatZAR(transfer.total_amount_zar)} highlight />
+          <Row label="Exchange rate" value={formatExchangeRate(transfer.exchange_rate, "ZAR", "GHS")} />
           {transfer.payment_reference && <Row label="Payment ref" value={transfer.payment_reference.reference_number} />}
         </View>
       </FintechCard>

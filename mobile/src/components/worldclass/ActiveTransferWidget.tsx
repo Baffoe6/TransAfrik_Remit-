@@ -49,7 +49,7 @@ export function ActiveTransferWidget({ transfer, onPress }: ActiveTransferWidget
           </View>
           <StatusPill label={TRANSFER_STATUS_LABELS[transfer.status] ?? transfer.status} variant="info" />
         </View>
-        <Text style={[typography.h3, { color: theme.text }]}>{formatZAR(transfer.send_amount_zar)}</Text>
+        <Text style={[typography.h3, { color: theme.text }]}>{formatZAR(transfer.total_amount_zar)}</Text>
         <Text style={[typography.caption, { color: theme.textSecondary }]}>{transfer.reference} · {formatRelativeDate(transfer.created_at)}</Text>
         <View style={{ height: 6, backgroundColor: theme.border, borderRadius: 3, marginVertical: spacing.md, overflow: "hidden" }}>
           <View style={{ width: `${progress}%`, height: 6, backgroundColor: theme.primary, borderRadius: 3 }} />

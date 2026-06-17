@@ -54,10 +54,19 @@ def record_status_change(
     except Exception:
         logger.exception("Failed to emit tracking event for transfer %s", transfer.id)
 
-    if notify and new_status in STATUS_NOTIFICATION_EVENTS:
-        _send_lifecycle_notification(db, transfer, STATUS_NOTIFICATION_EVENTS[new_status])
+    if notify:
+        _send_transfer_notifications(db, transfer)
 
     return history
+
+
+def _send_transfer_notifications(db: Session, transfer: Transfer) -> None:
+    try:
+        from app.services.transfer_notification_service import TransferNotificationService
+
+        TransferNotificationService.notify_status_change(db, transfer)
+    except Exception:
+        logger.exception("Failed to send transfer notification for transfer %s", transfer.id)
 
 
 def _send_lifecycle_notification(db: Session, transfer: Transfer, event: str) -> None:
@@ -82,23 +91,26 @@ def _send_lifecycle_notification(db: Session, transfer: Transfer, event: str) ->
 
 
 def determine_initial_status(kyc_status: KycStatus) -> TransferStatus:
-    if kyc_status != KycStatus.APPROVED:
-        return TransferStatus.DRAFT
-    return TransferStatus.DRAFT
+    return TransferStatus.QUOTE_CREATED
 
 
 TRANSFER_TIMELINE_LABELS = {
+    TransferStatus.QUOTE_CREATED: "Quote Created",
     TransferStatus.DRAFT: "Transfer Created",
-    TransferStatus.AWAITING_PAYMENT: "Payment Generated",
+    TransferStatus.AWAITING_PAYMENT: "Awaiting Payment",
+    TransferStatus.PAYMENT_PENDING: "Payment Pending",
+    TransferStatus.CHECKOUT_CREATED: "Checkout Created",
     TransferStatus.PAYMENT_PENDING_VERIFICATION: "Payment Received",
     TransferStatus.PAYMENT_VERIFIED: "Payment Verified",
     TransferStatus.COMPLIANCE_REVIEW: "Compliance Review",
     TransferStatus.READY_FOR_PROCESSING: "Compliance Approved",
     TransferStatus.SUBMITTED_TO_MUKURU: "Submitted To Mukuru",
     TransferStatus.PROCESSING: "Processing",
+    TransferStatus.PAYOUT_PENDING: "Payout Pending",
     TransferStatus.COMPLETED: "Completed",
     TransferStatus.FAILED: "Failed",
     TransferStatus.REFUNDED: "Refunded",
+    TransferStatus.CANCELLED: "Cancelled",
     TransferStatus.EXPIRED: "Expired",
 }
 

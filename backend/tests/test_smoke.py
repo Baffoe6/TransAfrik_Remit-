@@ -43,14 +43,23 @@ def test_login_and_calculate_integration():
 
     calc = client.post(
         "/api/v1/transfers/calculate",
-        json={"send_amount_zar": "1000.00"},
+        json={"amount_to_pay_zar": "1000.00"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert calc.status_code == 200
     data = calc.json()
-    send = Decimal(data["send_amount_zar"])
+    amount_to_pay = Decimal(data["amount_to_pay_zar"])
+    fee = Decimal(data["fee_zar"])
     rate = Decimal(data["exchange_rate"])
     receive = Decimal(data["receive_amount_ghs"])
-    assert send == Decimal("1000.00")
-    assert receive == (send * rate).quantize(Decimal("0.01"))
+    assert amount_to_pay == Decimal("1000.00")
+    assert amount_to_pay == Decimal(data["total_amount_zar"])
+    assert fee > 0
+    net_send = amount_to_pay - fee
+    assert receive == (net_send * rate).quantize(Decimal("0.01"))
     assert rate > 0
+    assert "base_rate" not in data
+    assert "markup_percentage" not in data
+    assert "provider" not in data
+    assert data.get("delivery_method")
+    assert data.get("estimated_delivery")

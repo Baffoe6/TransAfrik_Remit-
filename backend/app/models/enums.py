@@ -64,18 +64,30 @@ class BeneficiaryStatus(str, enum.Enum):
 
 
 class TransferStatus(str, enum.Enum):
+    QUOTE_CREATED = "quote_created"
     DRAFT = "draft"
     AWAITING_PAYMENT = "awaiting_payment"
+    PAYMENT_PENDING = "payment_pending"
+    CHECKOUT_CREATED = "checkout_created"
     PAYMENT_PENDING_VERIFICATION = "payment_pending_verification"
     PAYMENT_VERIFIED = "payment_verified"
     COMPLIANCE_REVIEW = "compliance_review"
     READY_FOR_PROCESSING = "ready_for_processing"
     SUBMITTED_TO_MUKURU = "submitted_to_mukuru"
     PROCESSING = "processing"
+    PAYOUT_PENDING = "payout_pending"
     COMPLETED = "completed"
     FAILED = "failed"
     REFUNDED = "refunded"
+    CANCELLED = "cancelled"
     EXPIRED = "expired"
+
+
+class CancellationReason(str, enum.Enum):
+    CUSTOMER_CANCELLED = "customer_cancelled"
+    EXPIRED_UNPAID_24H = "expired_unpaid_24h"
+    ADMIN_CANCELLED = "admin_cancelled"
+    LATE_PAYMENT_RECEIVED = "late_payment_received"
 
 
 class PaymentReferenceStatus(str, enum.Enum):
@@ -86,6 +98,9 @@ class PaymentReferenceStatus(str, enum.Enum):
     SUBMITTED_TO_PROVIDER = "submitted_to_provider"
     COMPLETED = "completed"
     EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    LATE_PAYMENT_RECEIVED = "late_payment_received"
+    REQUIRES_REVIEW = "requires_review"
     REJECTED = "rejected"
 
 
@@ -126,6 +141,30 @@ class NotificationChannel(str, enum.Enum):
     EMAIL = "email"
     SMS = "sms"
     WHATSAPP = "whatsapp"
+
+
+class NotificationDeliveryChannel(str, enum.Enum):
+    IN_APP = "in_app"
+    PUSH = "push"
+    SMS = "sms"
+    WHATSAPP = "whatsapp"
+    EMAIL = "email"
+
+
+class InAppReadStatus(str, enum.Enum):
+    UNREAD = "unread"
+    READ = "read"
+
+
+class NotificationDeliveryStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class InAppNotificationType(str, enum.Enum):
+    TRANSFER_STATUS = "transfer_status"
 
 
 class MukuruBatchStatus(str, enum.Enum):

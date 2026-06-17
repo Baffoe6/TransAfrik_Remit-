@@ -24,6 +24,7 @@ from app.routers import (
     mvp_admin,
     pilot,
     legal,
+    notifications,
     profile,
     wallet,
     agent,
@@ -32,6 +33,7 @@ from app.routers import (
     tenant,
     transfers,
     webhooks,
+    notifications,
     whatsapp_bot,
     security_center_admin,
 )
@@ -50,10 +52,21 @@ DISCLAIMER = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+
     from app.utils.file_storage import ensure_upload_dir
+    from app.services.transfer_scheduler import run_transfer_maintenance_scheduler
 
     ensure_upload_dir()
-    yield
+    scheduler_task = asyncio.create_task(run_transfer_maintenance_scheduler())
+    try:
+        yield
+    finally:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -85,6 +98,7 @@ app.include_router(profile.router, prefix="/api/v1")
 app.include_router(kyc.router, prefix="/api/v1")
 app.include_router(beneficiaries.router, prefix="/api/v1")
 app.include_router(transfers.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(payments.router, prefix="/api/v1")
 app.include_router(support.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")

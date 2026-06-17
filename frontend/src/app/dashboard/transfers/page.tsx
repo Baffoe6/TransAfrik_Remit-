@@ -38,7 +38,7 @@ export default function TransfersPage() {
                   <tr className="border-b text-left text-gray-500">
                     <th className="pb-3 pr-4">Reference</th>
                     <th className="pb-3 pr-4">Date</th>
-                    <th className="pb-3 pr-4">Send (ZAR)</th>
+                    <th className="pb-3 pr-4">Paid (ZAR)</th>
                     <th className="pb-3 pr-4">Receive (GHS)</th>
                     <th className="pb-3 pr-4">Status</th>
                     <th className="pb-3">Actions</th>
@@ -49,7 +49,7 @@ export default function TransfersPage() {
                     <tr key={t.id} className="border-b">
                       <td className="py-3 pr-4 font-medium">{t.reference}</td>
                       <td className="py-3 pr-4">{formatDate(t.created_at)}</td>
-                      <td className="py-3 pr-4">{formatCurrency(t.send_amount_zar, "ZAR")}</td>
+                      <td className="py-3 pr-4">{formatCurrency(t.total_amount_zar, "ZAR")}</td>
                       <td className="py-3 pr-4">{formatCurrency(t.receive_amount_ghs, "GHS")}</td>
                       <td className="py-3 pr-4"><StatusBadge status={t.status} /></td>
                       <td className="py-3">

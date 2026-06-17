@@ -16,18 +16,42 @@ export const GHANA_MM_PROVIDERS = [
 export const RELATIONSHIPS = ["Family", "Friend", "Spouse", "Parent", "Child", "Business", "Other"];
 
 export const TRANSFER_STATUS_LABELS: Record<string, string> = {
+  quote_created: "Quote created",
   draft: "Transfer created",
+  awaiting_payment: "Awaiting payment",
+  payment_pending: "Payment pending",
+  checkout_created: "Checkout created",
+  payment_pending_verification: "Payment pending verification",
+  payment_verified: "Payment verified",
   pending_payment: "Awaiting payment",
   payment_received: "Payment received",
   compliance_review: "Compliance review",
   submitted_to_partner: "Submitted to partner",
+  submitted_to_mukuru: "Submitted to partner",
   processing: "Processing",
+  payout_pending: "Payout pending",
   completed: "Completed",
   cancelled: "Cancelled",
+  expired: "Expired",
   failed: "Failed",
   rejected: "Rejected",
   refunded: "Refunded",
 };
+
+export const CANCELLATION_REASON_LABELS: Record<string, string> = {
+  customer_cancelled: "Customer cancelled",
+  expired_unpaid_24h: "Expired unpaid after 24 hours",
+  admin_cancelled: "Admin cancelled",
+  late_payment_received: "Late payment received after cancellation",
+};
+
+export const UNPAID_CANCELLABLE_STATUSES = new Set([
+  "quote_created",
+  "draft",
+  "awaiting_payment",
+  "payment_pending",
+  "checkout_created",
+]);
 
 export const ACTIVITY_STATUS_FILTERS = [
   { value: "all", label: "All" },
